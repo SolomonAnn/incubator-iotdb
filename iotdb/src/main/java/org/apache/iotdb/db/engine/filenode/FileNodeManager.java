@@ -318,6 +318,7 @@ public class FileNodeManager implements IStatistic, IService {
     try {
       long lastUpdateTime = fileNodeProcessor.getFlushLastUpdateTime(deviceId);
       if (timestamp < lastUpdateTime) {
+        LOGGER.info("{} insert overflow, timestamp: {}, deviceId: {}, lastUpdateTime: {}", fileNodeProcessor.getProcessorName(), timestamp, deviceId, lastUpdateTime);
         insertOverflow(fileNodeProcessor, timestamp, tsRecord, isMonitor, deviceId);
         insertType = 1;
       } else {
