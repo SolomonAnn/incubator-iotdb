@@ -229,7 +229,13 @@ public class FileNodeManager implements IStatistic, IService {
     String filenodeName;
     try {
       // return the stroage name
+      long start = System.currentTimeMillis();
       filenodeName = MManager.getInstance().getFileNameByPath(path);
+      long elapse = System.currentTimeMillis() - start;
+      if(elapse > 1000) {
+        LOGGER.info("{} MManager.getInstance().getFileNameByPath(path) cost {} ms", filenodeName,
+            elapse);
+      }
     } catch (PathErrorException e) {
       LOGGER.error("MManager get filenode name error, seriesPath is {}", path);
       throw new FileNodeManagerException(e);
@@ -237,22 +243,42 @@ public class FileNodeManager implements IStatistic, IService {
     FileNodeProcessor processor;
     processor = processorMap.get(filenodeName);
     if (processor != null) {
+      long start = System.currentTimeMillis();
       processor.lock(isWriteLock);
+      long elapse = System.currentTimeMillis() - start;
+      if(elapse > 1000) {
+        LOGGER.info("{} processor.lock(isWriteLock) cost {} ms", filenodeName, elapse);
+      }
     } else {
       filenodeName = filenodeName.intern();
       // calculate the value with same key synchronously
+      long start = System.currentTimeMillis();
       synchronized (filenodeName) {
         processor = processorMap.get(filenodeName);
         if (processor != null) {
+          long st = System.currentTimeMillis();
           processor.lock(isWriteLock);
+          long el = System.currentTimeMillis() - st;
+          if (el > 1000){
+            LOGGER.info("{} processor.lock(isWriteLock) cost {} ms", filenodeName, el);
+          }
         } else {
           // calculate the value with the key monitor
           LOGGER.debug("construct a processor instance, the filenode is {}, Thread is {}",
               filenodeName, Thread.currentThread().getId());
+          long st = System.currentTimeMillis();
           processor = constructNewProcessor(filenodeName);
           processor.lock(isWriteLock);
+          long el = System.currentTimeMillis() - st;
+          if (el > 1000){
+            LOGGER.info("{} constructNewProcessor and processor.lock(isWriteLock) cost {} ms", filenodeName, el);
+          }
           processorMap.put(filenodeName, processor);
         }
+      }
+      long elapse = System.currentTimeMillis() - start;
+      if(elapse > 1000) {
+        LOGGER.info("{} synchronized (filenodeName) block cost {} ms", filenodeName, elapse);
       }
     }
     return processor;

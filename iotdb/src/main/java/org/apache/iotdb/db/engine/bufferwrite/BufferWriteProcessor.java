@@ -349,7 +349,7 @@ public class BufferWriteProcessor extends Processor {
    */
   private boolean flushTask(String displayMessage,
       IMemTable tmpMemTableToFlush, long version,
-      long walTaskId) {
+      long walTaskId, long flushId) {
     boolean result;
     long flushStartTime = System.currentTimeMillis();
     LOGGER.info("The bufferwrite processor {} starts flushing {}.", getProcessorName(),
@@ -455,7 +455,7 @@ public class BufferWriteProcessor extends Processor {
             getProcessorName(), FlushManager.getInstance().getWaitingTasksNumber(),
             FlushManager.getInstance().getCorePoolSize());
         start = System.currentTimeMillis();
-        flushTask("synchronously", tmpMemTableToFlush, version, walTaskId);
+        flushTask("synchronously", tmpMemTableToFlush, version, walTaskId, flushId);
         elapse = System.currentTimeMillis() - start;
         LOGGER.info("{} flush for close cost {} ms", getProcessorName(), elapse);
         flushFuture = new ImmediateFuture<>(true);
@@ -467,7 +467,7 @@ public class BufferWriteProcessor extends Processor {
               FlushManager.getInstance().getCorePoolSize());
         }
         flushFuture = FlushManager.getInstance().submit(() -> flushTask("asynchronously",
-            tmpMemTableToFlush, version, walTaskId));
+            tmpMemTableToFlush, version, walTaskId, flushId));
       }
     } else {
       flushFuture = new ImmediateFuture<>(true);
