@@ -253,7 +253,12 @@ public class BufferWriteProcessor extends Processor {
       LOGGER.info("The usage of memory {} in bufferwrite processor {} reaches the threshold {}",
           usageMem, processorName, threshold);
       try {
+        long start = System.currentTimeMillis();
         flush();
+        long elapse = System.currentTimeMillis() - start;
+        if(elapse > 1000) {
+          LOGGER.info("{} check memThreshold for flush cost {} ms", processorName, elapse);
+        }
       } catch (IOException e) {
         LOGGER.error("Flush bufferwrite error.", e);
         throw new BufferWriteProcessorException(e);
@@ -413,17 +418,6 @@ public class BufferWriteProcessor extends Processor {
     }
     lastFlushTime = System.currentTimeMillis();
     // check value count
-    // waiting for the end of last flush operation.
-    try {
-      long startTime = System.currentTimeMillis();
-      flushFuture.get();
-      long timeCost = System.currentTimeMillis() - startTime;
-      if (timeCost > 10) {
-        LOGGER.info("BufferWrite Processor {} wait for the previous flushing task for {} ms.", getProcessorName(), timeCost);
-      }
-    } catch (InterruptedException | ExecutionException e) {
-      throw new IOException(e);
-    }
     if (valueCount > 0) {
       // update the lastUpdatetime, prepare for flush
       try {
@@ -441,11 +435,14 @@ public class BufferWriteProcessor extends Processor {
       }
       valueCount = 0;
 
-      synchronized (flushingMemTables) {
-        flushingMemTables.add(workMemTable);
-      }
+      flushingMemTables.add(workMemTable);
       IMemTable tmpMemTableToFlush = workMemTable;
+      long start = System.currentTimeMillis();
       workMemTable = MemTablePool.getInstance().getEmptyMemTable();
+      long elapse = System.currentTimeMillis() - start;
+      if (elapse > 1000) {
+        LOGGER.info("{} get memTable from pool cost {} ms", getProcessorName(), elapse);
+      }
 
       flushId++;
       long version = versionController.nextVersion();
@@ -457,7 +454,10 @@ public class BufferWriteProcessor extends Processor {
             "flush memtable for bufferwrite processor {} synchronously for close task.",
             getProcessorName(), FlushManager.getInstance().getWaitingTasksNumber(),
             FlushManager.getInstance().getCorePoolSize());
+        start = System.currentTimeMillis();
         flushTask("synchronously", tmpMemTableToFlush, version, walTaskId);
+        elapse = System.currentTimeMillis() - start;
+        LOGGER.info("{} flush for close cost {} ms", getProcessorName(), elapse);
         flushFuture = new ImmediateFuture<>(true);
       } else {
         if (LOGGER.isInfoEnabled()) {

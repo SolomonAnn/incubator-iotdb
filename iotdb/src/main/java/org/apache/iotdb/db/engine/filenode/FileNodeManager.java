@@ -311,8 +311,13 @@ public class FileNodeManager implements IStatistic, IService {
 //    }
 
     updateStat(isMonitor, tsRecord);
-
+    long start = System.currentTimeMillis();
     FileNodeProcessor fileNodeProcessor = getProcessor(deviceId, true);
+    long elapse = System.currentTimeMillis() - start;
+    if(elapse > 1000){
+      LOGGER.info("{} execute [getProcessor(deviceId, true)] cost ,{}, ms", fileNodeProcessor.getProcessorName(), elapse);
+    }
+
     int insertType;
 
     try {
@@ -489,8 +494,12 @@ public class FileNodeManager implements IStatistic, IService {
             bufferWriteProcessor.getInsertFilePath(), MemUtils.bytesCntToStr(
                 IoTDBDescriptor.getInstance().getConfig().getBufferwriteFileSizeThreshold()));
       }
-
+      long start = System.currentTimeMillis();
       fileNodeProcessor.closeBufferWrite();
+      long elapse = System.currentTimeMillis() - start;
+      if (elapse > 1000) {
+        LOGGER.info("{} close triggered by file size threshold cost {} ms", filenodeName, elapse);
+      }
     }
   }
 
