@@ -122,4 +122,17 @@ public class NativeRestorableIOWriter extends TsFileIOWriter {
   public void endFile() throws IOException {
     super.endFile(new FileSchema(knownSchemas));
   }
+
+  public static void main(String[] args) {
+    String path = args[0];
+    String append = args[1];
+    try {
+      long start = System.currentTimeMillis();
+      new NativeRestorableIOWriter(new File(path), Boolean.parseBoolean(append));
+      long elapse = System.currentTimeMillis() - start;
+      System.out.println("new NativeRestorableIOWriter cost " + elapse + " ms");
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 }
