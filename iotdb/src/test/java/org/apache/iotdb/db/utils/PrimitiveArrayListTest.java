@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.utils;
 
+import org.apache.iotdb.db.monitor.collector.MemTableWriteTimeCost;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,9 +36,10 @@ public class PrimitiveArrayListTest {
 
   @Test
   public void test1() {
-
+    MemTableWriteTimeCost.getInstance().init();
     long timestamp = System.currentTimeMillis();
-    int count = 10000;
+    int count = 3200;
+
     PrimitiveArrayList primitiveArrayList = new PrimitiveArrayList(int.class);
     for (int i = 0; i < count; i++) {
       primitiveArrayList.putTimestamp(i, i);

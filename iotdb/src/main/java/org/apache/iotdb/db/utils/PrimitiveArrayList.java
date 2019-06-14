@@ -97,7 +97,7 @@ public class PrimitiveArrayList {
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_2, start);
     start = System.currentTimeMillis();
     //Array.set(values.get(currentIndex), currentArrayIndex, value);
-    ((Object[])values.get(currentIndex))[currentArrayIndex] = value;
+    ((double[])values.get(currentIndex))[currentArrayIndex] = (double) value;
     length++;
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_3, start);
   }
