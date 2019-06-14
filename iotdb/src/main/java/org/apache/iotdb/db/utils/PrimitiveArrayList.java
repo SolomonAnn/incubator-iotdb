@@ -91,12 +91,14 @@ public class PrimitiveArrayList {
     long start = System.currentTimeMillis();
     capacity(currentArrayIndex + 1 + 1);
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_1, start);
-    start = System.currentTimeMillis();
     currentArrayIndex++;
+    start = System.currentTimeMillis();
     timestamps.get(currentIndex)[currentArrayIndex] = timestamp;
+    MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_2, start);
+    start = System.currentTimeMillis();
     Array.set(values.get(currentIndex), currentArrayIndex, value);
     length++;
-    MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_2, start);
+    MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_3, start);
   }
 
   public long getTimestamp(int index) {

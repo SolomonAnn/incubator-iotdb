@@ -57,6 +57,7 @@ public class MemTableWriteTimeCost {
     WRITE_2,
     PUT_TIMESTAMP_1,
     PUT_TIMESTAMP_2,
+    PUT_TIMESTAMP_3,
   }
 }
 
