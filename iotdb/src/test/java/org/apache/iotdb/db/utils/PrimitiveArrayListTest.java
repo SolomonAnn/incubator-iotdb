@@ -18,7 +18,9 @@
  */
 package org.apache.iotdb.db.utils;
 
+import java.util.Map;
 import org.apache.iotdb.db.monitor.collector.MemTableWriteTimeCost;
+import org.apache.iotdb.db.monitor.collector.MemTableWriteTimeCost.MemTableWriteTimeCostType;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,20 +38,31 @@ public class PrimitiveArrayListTest {
 
   @Test
   public void test1() {
-    MemTableWriteTimeCost.getInstance().init();
-    long timestamp = System.currentTimeMillis();
+
     int count = 3200;
-
-    PrimitiveArrayList primitiveArrayList = new PrimitiveArrayList(int.class);
-    for (int i = 0; i < count; i++) {
-      primitiveArrayList.putTimestamp(i, i);
+    double data = 1453.55;
+    PrimitiveArrayList primitiveArrayList = new PrimitiveArrayList(double.class);
+    for(int loop=0;loop<15000;loop++) {
+      MemTableWriteTimeCost.getInstance().init();
+      long start = System.currentTimeMillis();
+      for (int i = 0; i < count; i++) {
+        primitiveArrayList.putTimestamp(loop * count + i, data);
+      }
+      long elapse = System.currentTimeMillis() - start;
+      if(elapse > 10) {
+        System.out.println("loop " + loop + " cost " + elapse + " ms");
+        Map<MemTableWriteTimeCostType, long[]> map = MemTableWriteTimeCost.getInstance().getTimeCostMaps().get(Thread.currentThread().getName());
+        for(MemTableWriteTimeCostType type: MemTableWriteTimeCostType.values()){
+          System.out.println(String.format("%s cost %d ms, execute %d times", type, map.get(type)[1], map.get(type)[0]));
+        }
+      }
     }
 
-    for (int i = 0; i < count; i++) {
-      int v = (int) primitiveArrayList.getValue(i);
-      Assert.assertEquals((long) i, primitiveArrayList.getTimestamp(i));
-      Assert.assertEquals(i, v);
-    }
+//    for (int i = 0; i < count; i++) {
+//      int v = (int) primitiveArrayList.getValue(i);
+//      Assert.assertEquals((long) i, primitiveArrayList.getTimestamp(i));
+//      Assert.assertEquals(i, v);
+//    }
     printMemUsed();
   }
 }

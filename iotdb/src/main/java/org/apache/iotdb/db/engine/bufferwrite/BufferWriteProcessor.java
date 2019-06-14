@@ -213,7 +213,8 @@ public class BufferWriteProcessor extends Processor {
           LOGGER.info("BufferWriteProcessor.write step2 of SAFE cost: {}", start2);
           Map<MemTableWriteTimeCostType, long[]> map = MemTableWriteTimeCost.getInstance().getTimeCostMaps().get(Thread.currentThread().getName());
           for(MemTableWriteTimeCostType type: MemTableWriteTimeCostType.values()){
-            LOGGER.info("In BufferWriteProcessor.write step2 of SAFE, {} cost {} ms, execute {} times", type, map.get(type)[1], map.get(type)[0]);
+            String cost =  String.format("%.2f", map.get(type)[1] / 1000000.0);
+            LOGGER.info("In BufferWriteProcessor.write step2 of SAFE, {} cost {} ms, execute {} times", type, cost, map.get(type)[0]);
           }
         }
         checkMemThreshold4Flush(memUsage);

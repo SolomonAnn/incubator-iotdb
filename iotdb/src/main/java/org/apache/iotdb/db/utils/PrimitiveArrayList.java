@@ -54,7 +54,7 @@ public class PrimitiveArrayList {
   private void capacity(int aimSize) {
     if (currentArraySize < aimSize) {
       if (currentArraySize < MAX_SIZE_OF_ONE_ARRAY) {
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
         // expand current Array
         int newCapacity = Math.min(MAX_SIZE_OF_ONE_ARRAY, currentArraySize * 2);
         values.set(currentIndex,
@@ -64,7 +64,7 @@ public class PrimitiveArrayList {
         currentArraySize = newCapacity;
         MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.CAPACITY_1, start);
       } else {
-        long start = System.currentTimeMillis();
+        long start = System.nanoTime();
         // add a new Array to the list
         values.add(Array.newInstance(clazz, INITIAL_SIZE));
         timestamps.add(new long[INITIAL_SIZE]);
@@ -77,25 +77,25 @@ public class PrimitiveArrayList {
   }
 
   private Object expandArray(Object array, int preLentgh, int aimLength) {
-    long start = System.currentTimeMillis();
+    long start = System.nanoTime();
     Class arrayClass = array.getClass().getComponentType();
     Object newArray = Array.newInstance(arrayClass, aimLength);
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.EXPAND_ARRAY_1, start);
-    start = System.currentTimeMillis();
+    start = System.nanoTime();
     System.arraycopy(array, 0, newArray, 0, preLentgh);
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.EXPAND_ARRAY_2, start);
     return newArray;
   }
 
   public void putTimestamp(long timestamp, Object value) {
-    long start = System.currentTimeMillis();
+    long start = System.nanoTime();
     capacity(currentArrayIndex + 1 + 1);
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_1, start);
     currentArrayIndex++;
-    start = System.currentTimeMillis();
+    start = System.nanoTime();
     timestamps.get(currentIndex)[currentArrayIndex] = timestamp;
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_2, start);
-    start = System.currentTimeMillis();
+    start = System.nanoTime();
     //Array.set(values.get(currentIndex), currentArrayIndex, value);
     ((double[])values.get(currentIndex))[currentArrayIndex] = (double) value;
     length++;
