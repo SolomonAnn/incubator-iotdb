@@ -1,19 +1,15 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership.  The ASF licenses this file to you under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with the License.  You may obtain
+ * a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied.  See the License for the specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.iotdb.db.utils;
@@ -23,9 +19,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.iotdb.db.monitor.collector.MemTableWriteTimeCost;
 import org.apache.iotdb.db.monitor.collector.MemTableWriteTimeCost.MemTableWriteTimeCostType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PrimitiveArrayList {
 
+  private static final Logger LOGGER = LoggerFactory.getLogger(PrimitiveArrayList.class);
   private static final int MAX_SIZE_OF_ONE_ARRAY = 512;
   private static final int INITIAL_SIZE = 1;
 
@@ -62,6 +61,10 @@ public class PrimitiveArrayList {
         timestamps.set(currentIndex,
             (long[]) expandArray(timestamps.get(currentIndex), currentArraySize, newCapacity));
         currentArraySize = newCapacity;
+        LOGGER.info(
+            "{} expand capacity by expand current Array, currentArraySize: {}, currentIndex: {}, currentArrayIndex: {}, length: {}",
+            Thread.currentThread().getName(), currentArraySize, currentIndex, currentArrayIndex,
+            length);
         MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.CAPACITY_1, start);
       } else {
         long start = System.nanoTime();
@@ -71,6 +74,10 @@ public class PrimitiveArrayList {
         currentIndex++;
         currentArraySize = INITIAL_SIZE;
         currentArrayIndex = -1;
+        LOGGER.info(
+            "{} expand capacity by add a new Array to the list, currentArraySize: {}, currentIndex: {}, currentArrayIndex: {}, length: {}",
+            Thread.currentThread().getName(), currentArraySize, currentIndex, currentArrayIndex,
+            length);
         MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.CAPACITY_2, start);
       }
     }
@@ -97,7 +104,7 @@ public class PrimitiveArrayList {
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_2, start);
     start = System.nanoTime();
     //Array.set(values.get(currentIndex), currentArrayIndex, value);
-    ((double[])values.get(currentIndex))[currentArrayIndex] = (double) value;
+    ((double[]) values.get(currentIndex))[currentArrayIndex] = (double) value;
     length++;
     MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.PUT_TIMESTAMP_3, start);
   }

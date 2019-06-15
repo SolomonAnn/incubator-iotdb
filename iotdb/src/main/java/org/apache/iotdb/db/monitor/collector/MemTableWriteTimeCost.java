@@ -9,6 +9,12 @@ public class MemTableWriteTimeCost {
     return timeCostMaps;
   }
 
+  public boolean isEnabled() {
+    return isEnabled;
+  }
+
+  private boolean isEnabled = false;
+
   private Map<String, Map<MemTableWriteTimeCostType, long[]>> timeCostMaps = new ConcurrentHashMap<>();
 
   public static MemTableWriteTimeCost getInstance() {
@@ -25,27 +31,31 @@ public class MemTableWriteTimeCost {
   }
 
   public void init() {
-    if (timeCostMaps.get(Thread.currentThread().getName()) == null) {
-      Map<MemTableWriteTimeCostType, long[]> map = new ConcurrentHashMap<>();
-      for (MemTableWriteTimeCostType type : MemTableWriteTimeCostType.values()) {
-        map.put(type, new long[2]);
-      }
-      timeCostMaps.put(Thread.currentThread().getName(), map);
-    } else {
-      timeCostMaps.get(Thread.currentThread().getName()).clear();
-      for (MemTableWriteTimeCostType type : MemTableWriteTimeCostType.values()) {
-        timeCostMaps.get(Thread.currentThread().getName()).put(type, new long[2]);
+    if(isEnabled) {
+      if (timeCostMaps.get(Thread.currentThread().getName()) == null) {
+        Map<MemTableWriteTimeCostType, long[]> map = new ConcurrentHashMap<>();
+        for (MemTableWriteTimeCostType type : MemTableWriteTimeCostType.values()) {
+          map.put(type, new long[2]);
+        }
+        timeCostMaps.put(Thread.currentThread().getName(), map);
+      } else {
+        timeCostMaps.get(Thread.currentThread().getName()).clear();
+        for (MemTableWriteTimeCostType type : MemTableWriteTimeCostType.values()) {
+          timeCostMaps.get(Thread.currentThread().getName()).put(type, new long[2]);
+        }
       }
     }
   }
 
   public void measure(MemTableWriteTimeCostType type, long start) {
-    long elapse = System.nanoTime() - start;
-    long[] a = new long[2];
-    // long[0] is the count, long[1] is the latency in nano sec
-    a[0] = timeCostMaps.get(Thread.currentThread().getName()).get(type)[0] + 1;
-    a[1] = timeCostMaps.get(Thread.currentThread().getName()).get(type)[1] + elapse;
-    timeCostMaps.get(Thread.currentThread().getName()).put(type, a);
+    if(isEnabled) {
+      long elapse = System.nanoTime() - start;
+      long[] a = new long[2];
+      // long[0] is the count, long[1] is the latency in nano sec
+      a[0] = timeCostMaps.get(Thread.currentThread().getName()).get(type)[0] + 1;
+      a[1] = timeCostMaps.get(Thread.currentThread().getName()).get(type)[1] + elapse;
+      timeCostMaps.get(Thread.currentThread().getName()).put(type, a);
+    }
   }
 
   public enum MemTableWriteTimeCostType {
