@@ -61,10 +61,6 @@ public class PrimitiveArrayList {
         timestamps.set(currentIndex,
             (long[]) expandArray(timestamps.get(currentIndex), currentArraySize, newCapacity));
         currentArraySize = newCapacity;
-        LOGGER.info(
-            "{} expand capacity by expand current Array, currentArraySize: {}, currentIndex: {}, currentArrayIndex: {}, length: {}",
-            Thread.currentThread().getName(), currentArraySize, currentIndex, currentArrayIndex,
-            length);
         MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.CAPACITY_1, start);
       } else {
         long start = System.nanoTime();
@@ -74,10 +70,6 @@ public class PrimitiveArrayList {
         currentIndex++;
         currentArraySize = INITIAL_SIZE;
         currentArrayIndex = -1;
-        LOGGER.info(
-            "{} expand capacity by add a new Array to the list, currentArraySize: {}, currentIndex: {}, currentArrayIndex: {}, length: {}",
-            Thread.currentThread().getName(), currentArraySize, currentIndex, currentArrayIndex,
-            length);
         MemTableWriteTimeCost.getInstance().measure(MemTableWriteTimeCostType.CAPACITY_2, start);
       }
     }
