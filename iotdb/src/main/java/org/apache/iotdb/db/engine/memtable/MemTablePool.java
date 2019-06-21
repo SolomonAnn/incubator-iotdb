@@ -1,6 +1,7 @@
 package org.apache.iotdb.db.engine.memtable;
 
 import java.util.Stack;
+import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.tsfile.common.constant.SystemConstant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +11,7 @@ public class MemTablePool {
 
   private Stack<IMemTable> emptyMemTables;
   // >= number of storage group * 2
-  private int capacity = 20;
+  private int capacity = IoTDBDescriptor.getInstance().getConfig().getMemTableSize();
   private int size = 0;
 
   private static final MemTablePool INSTANCE = new MemTablePool();

@@ -67,6 +67,12 @@ public class IoTDBConfig {
    */
   private long forceWalPeriodInMs = 10;
 
+
+  /**
+   * max number of MamTable in memory
+   */
+  private int memTableSize = 20;
+
   /**
    * Data directory.
    */
@@ -608,6 +614,15 @@ public class IoTDBConfig {
 
   public void setPeriodTimeForMerge(long periodTimeForMerge) {
     this.periodTimeForMerge = periodTimeForMerge;
+  }
+
+
+  public int getMemTableSize() {
+    return memTableSize;
+  }
+
+  public void setMemTableSize(int memTableSize) {
+    this.memTableSize = memTableSize;
   }
 
   public boolean isEnableTimingCloseAndMerge() {

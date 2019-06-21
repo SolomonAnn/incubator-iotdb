@@ -156,6 +156,11 @@ public class IoTDBDescriptor {
       conf.setPeriodTimeForMerge(Long.parseLong(
           properties.getProperty("period_time_for_merge_in_second",
               Long.toString(conf.getPeriodTimeForMerge())).trim()));
+
+      conf.setMemTableSize(Integer.parseInt(
+          properties.getProperty("memtable_size",
+              Integer.toString(conf.getMemTableSize())).trim()));
+
       conf.setEnableTimingCloseAndMerge(Boolean.parseBoolean(properties
           .getProperty("enable_timing_close_and_merge",
                   Boolean.toString(conf.isEnableTimingCloseAndMerge())).trim()));
