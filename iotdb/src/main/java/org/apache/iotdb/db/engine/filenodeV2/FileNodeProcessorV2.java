@@ -268,12 +268,14 @@ public class FileNodeProcessorV2 {
         sequenceFileList.add(workSequenceTsFileProcessor.getTsFileResource());
       }
       unsealedTsFileProcessor = workSequenceTsFileProcessor;
+      LOGGER.info("FNP {} add a new resource, sequence file resource list size: {}", storageGroupName, sequenceFileList.size());
     } else {
       if (workUnSequenceTsFileProcessor == null) {
         workUnSequenceTsFileProcessor = createTsFileProcessor(false);
         unSequenceFileList.add(workUnSequenceTsFileProcessor.getTsFileResource());
       }
       unsealedTsFileProcessor = workUnSequenceTsFileProcessor;
+      LOGGER.info("FNP {} add a new resource, unsequence file resource list size: {}", storageGroupName, unSequenceFileList.size());
     }
 
     // insert BufferWrite
@@ -591,7 +593,9 @@ public class FileNodeProcessorV2 {
     } else {
       closingUnSequenceTsFileProcessor.remove(unsealedTsFileProcessor);
     }
-    LOGGER.info("signal closing file node condition");
+    LOGGER.info("storage group {} signal closing file node condition, closing tsfile processor size {}",
+        closingSequenceTsFileProcessor.size() + closingUnSequenceTsFileProcessor.size(), storageGroupName);
+
     synchronized (closeFileNodeCondition) {
       closeFileNodeCondition.notify();
     }
