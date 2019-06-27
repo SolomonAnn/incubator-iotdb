@@ -586,8 +586,11 @@ public class FileNodeProcessorV2 {
   public void closeUnsealedTsFileProcessorCallback(
       UnsealedTsFileProcessorV2 unsealedTsFileProcessor) {
     // end time with one start time
-    TsFileResourceV2 resource = unsealedTsFileProcessor.getTsFileResource();
-    resource.setClosed(true);
+    try {
+      unsealedTsFileProcessor.close();
+    } catch (IOException e) {
+      LOGGER.error("storage group: {} close unsealedTsFileProcessor failed", storageGroupName, e);
+    }
     if (closingSequenceTsFileProcessor.contains(unsealedTsFileProcessor)) {
       closingSequenceTsFileProcessor.remove(unsealedTsFileProcessor);
     } else {

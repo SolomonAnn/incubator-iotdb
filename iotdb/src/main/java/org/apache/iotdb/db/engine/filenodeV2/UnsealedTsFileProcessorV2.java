@@ -100,8 +100,6 @@ public class UnsealedTsFileProcessorV2 {
     this.tsFileResource = new TsFileResourceV2(tsfile, this);
     this.versionController = versionController;
     this.writer = new NativeRestorableIOWriter(tsfile);
-    this.logNode = MultiFileLogNodeManager.getInstance()
-        .getNode(storageGroupName + "-" + tsfile.getName());
     this.closeUnsealedFileCallback = closeUnsealedFileCallback;
     this.flushUpdateLatestFlushTimeCallback = flushUpdateLatestFlushTimeCallback;
     LOGGER.info("create a new tsfile processor {}", tsfile.getAbsolutePath());
@@ -128,7 +126,7 @@ public class UnsealedTsFileProcessorV2 {
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
-        logNode.write(insertPlan);
+        getLogNode().write(insertPlan);
       } catch (IOException e) {
         LOGGER.error("write WAL failed", e);
         return false;
@@ -258,7 +256,7 @@ public class UnsealedTsFileProcessorV2 {
       if (workMemTable == null) {
         return;
       }
-      logNode.notifyStartFlush();
+      getLogNode().notifyStartFlush();
       flushingMemTables.addLast(workMemTable);
       workMemTable.setVersion(versionController.nextVersion());
       FlushManager.getInstance().registerUnsealedTsFileProcessor(this);
@@ -304,7 +302,7 @@ public class UnsealedTsFileProcessorV2 {
           this::releaseFlushedMemTableCallback);
       flushTask.flushMemTable();
       MemTablePool.getInstance().putBack(memTableToFlush, storageGroupName);
-      logNode.notifyEndFlush();
+      getLogNode().notifyEndFlush();
       LOGGER.info("flush a memtable has finished");
     } else {
       LOGGER.info(
@@ -362,9 +360,20 @@ public class UnsealedTsFileProcessorV2 {
     return managedByFlushManager;
   }
 
-  public WriteLogNode getLogNode() {
+
+  public WriteLogNode getLogNode() throws IOException {
+    if (logNode == null) {
+      logNode = MultiFileLogNodeManager.getInstance()
+          .getNode(storageGroupName + "-" + tsFileResource.getFile().getName());
+    }
     return logNode;
   }
+
+  public void close() throws IOException {
+    tsFileResource.setClosed(true);
+    MultiFileLogNodeManager.getInstance().deleteNode(storageGroupName + "-" + tsFileResource.getFile().getName());
+  }
+
 
   public void setManagedByFlushManager(boolean managedByFlushManager) {
     this.managedByFlushManager = managedByFlushManager;
