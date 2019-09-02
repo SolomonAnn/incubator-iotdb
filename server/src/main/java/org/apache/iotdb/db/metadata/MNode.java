@@ -53,21 +53,25 @@ public class MNode implements Serializable {
   private Map<String, MNode> children;
 
   /**
-   * Constructor of MNode.
+   * Constructor of non-leaf MNode.
    */
   public MNode(String name, MNode parent, boolean isLeaf) {
     this.setName(name);
-    this.parent = parent;
     this.isLeaf = isLeaf;
     this.isStorageLevel = false;
+    this.parent = parent;
     if (!isLeaf) {
       children = new LinkedHashMap<>();
     }
   }
 
-  public MNode(String name, MNode parent, TSDataType dataType, TSEncoding encoding,
+  /**
+   *
+   * Constructor of leaf MNode.
+   */
+  public MNode(String name, TSDataType dataType, TSEncoding encoding,
       CompressionType type) {
-    this(name, parent, true);
+    this(name, null, true);
     this.schema = new MeasurementSchema(name, dataType, encoding, type);
   }
 
@@ -197,5 +201,4 @@ public class MNode implements Serializable {
   public void setName(String name) {
     this.name = name;
   }
-
 }

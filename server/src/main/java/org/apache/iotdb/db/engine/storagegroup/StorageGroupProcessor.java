@@ -121,14 +121,14 @@ public class StorageGroupProcessor {
    * changes upon timestamps of each device, and is used to update latestFlushedTimeForEachDevice
    * when a flush is issued.
    */
-  private Map<String, Long> latestTimeForEachDevice = new HashMap<>();
+  private Map<Long, Long> latestTimeForEachDevice = new HashMap<>();
   /**
    * device -> largest timestamp of the latest memtable to be submitted to asyncTryToFlush
    * latestFlushedTimeForEachDevice determines whether a data point should be put into a sequential
    * file or an unsequential file. Data of some device with timestamp less than or equals to the
    * device's latestFlushedTime should go into an unsequential file.
    */
-  private Map<String, Long> latestFlushedTimeForEachDevice = new HashMap<>();
+  private Map<Long, Long> latestFlushedTimeForEachDevice = new HashMap<>();
   private String storageGroupName;
   /**
    * versionController assigns a version for each MemTable and deletion/update such that after they
@@ -635,8 +635,8 @@ public class StorageGroupProcessor {
    */
   private void updateEndTimeMap(TsFileProcessor tsFileProcessor) {
     TsFileResource resource = tsFileProcessor.getTsFileResource();
-    for (Entry<String, Long> startTime : resource.getStartTimeMap().entrySet()) {
-      String deviceId = startTime.getKey();
+    for (Entry<Long, Long> startTime : resource.getStartTimeMap().entrySet()) {
+      Long deviceId = startTime.getKey();
       resource.forceUpdateEndTime(deviceId, latestTimeForEachDevice.get(deviceId));
     }
   }
@@ -644,7 +644,7 @@ public class StorageGroupProcessor {
 
   private boolean updateLatestFlushTimeCallback() {
     // update the largest timestamp in the last flushing memtable
-    for (Entry<String, Long> entry : latestTimeForEachDevice.entrySet()) {
+    for (Entry<Long, Long> entry : latestTimeForEachDevice.entrySet()) {
       latestFlushedTimeForEachDevice.put(entry.getKey(), entry.getValue());
     }
     return true;

@@ -44,12 +44,12 @@ public class TsFileResource {
   /**
    * device -> start time
    */
-  private Map<String, Long> startTimeMap;
+  private Map<Long, Long> startTimeMap;
 
   /**
    * device -> end time. It is null if it's an unsealed sequence tsfile
    */
-  private Map<String, Long> endTimeMap;
+  private Map<Long, Long> endTimeMap;
 
   private TsFileProcessor processor;
 
@@ -84,8 +84,8 @@ public class TsFileResource {
   }
 
   public TsFileResource(File file,
-      Map<String, Long> startTimeMap,
-      Map<String, Long> endTimeMap) {
+      Map<Long, Long> startTimeMap,
+      Map<Long, Long> endTimeMap) {
     this.file = file;
     this.startTimeMap = startTimeMap;
     this.endTimeMap = endTimeMap;
@@ -93,8 +93,8 @@ public class TsFileResource {
   }
 
   public TsFileResource(File file,
-      Map<String, Long> startTimeMap,
-      Map<String, Long> endTimeMap,
+      Map<Long, Long> startTimeMap,
+      Map<Long, Long> endTimeMap,
       ReadOnlyMemChunk readOnlyMemChunk,
       List<ChunkMetaData> chunkMetaDatas) {
     this.file = file;
@@ -108,12 +108,12 @@ public class TsFileResource {
     try (OutputStream outputStream = new BufferedOutputStream(
         new FileOutputStream(file + RESOURCE_SUFFIX))) {
       ReadWriteIOUtils.write(this.startTimeMap.size(), outputStream);
-      for (Entry<String, Long> entry : this.startTimeMap.entrySet()) {
+      for (Entry<Long, Long> entry : this.startTimeMap.entrySet()) {
         ReadWriteIOUtils.write(entry.getKey(), outputStream);
         ReadWriteIOUtils.write(entry.getValue(), outputStream);
       }
       ReadWriteIOUtils.write(this.endTimeMap.size(), outputStream);
-      for (Entry<String, Long> entry : this.endTimeMap.entrySet()) {
+      for (Entry<Long, Long> entry : this.endTimeMap.entrySet()) {
         ReadWriteIOUtils.write(entry.getKey(), outputStream);
         ReadWriteIOUtils.write(entry.getValue(), outputStream);
       }
@@ -124,14 +124,14 @@ public class TsFileResource {
     try (InputStream inputStream = new BufferedInputStream(
         new FileInputStream(file + RESOURCE_SUFFIX))) {
       int size = ReadWriteIOUtils.readInt(inputStream);
-      Map<String, Long> startTimes = new HashMap<>();
+      Map<Long, Long> startTimes = new HashMap<>();
       for (int i = 0; i < size; i++) {
         String path = ReadWriteIOUtils.readString(inputStream);
         long time = ReadWriteIOUtils.readLong(inputStream);
         startTimes.put(path, time);
       }
       size = ReadWriteIOUtils.readInt(inputStream);
-      Map<String, Long> endTimes = new HashMap<>();
+      Map<Long, Long> endTimes = new HashMap<>();
       for (int i = 0; i < size; i++) {
         String path = ReadWriteIOUtils.readString(inputStream);
         long time = ReadWriteIOUtils.readLong(inputStream);
@@ -142,14 +142,14 @@ public class TsFileResource {
     }
   }
 
-  public void updateStartTime(String device, long time) {
+  public void updateStartTime(Long device, long time) {
     long startTime = startTimeMap.getOrDefault(device, Long.MAX_VALUE);
     if (time < startTime) {
       startTimeMap.put(device, time);
     }
   }
 
-  public void updateEndTime(String device, long time) {
+  public void updateEndTime(Long device, long time) {
     long endTime = endTimeMap.getOrDefault(device, Long.MIN_VALUE);
     if (time > endTime) {
       endTimeMap.put(device, time);
@@ -160,7 +160,7 @@ public class TsFileResource {
     return new File(file+RESOURCE_SUFFIX).exists();
   }
 
-  public void forceUpdateEndTime(String device, long time) {
+  public void forceUpdateEndTime(Long device, long time) {
       endTimeMap.put(device, time);
   }
 
@@ -191,15 +191,15 @@ public class TsFileResource {
     return file.length();
   }
 
-  public Map<String, Long> getStartTimeMap() {
+  public Map<Long, Long> getStartTimeMap() {
     return startTimeMap;
   }
 
-  public void setEndTimeMap(Map<String, Long> endTimeMap) {
+  public void setEndTimeMap(Map<Long, Long> endTimeMap) {
     this.endTimeMap = endTimeMap;
   }
 
-  public Map<String, Long> getEndTimeMap() {
+  public Map<Long, Long> getEndTimeMap() {
     return endTimeMap;
   }
 
@@ -221,7 +221,7 @@ public class TsFileResource {
     return processor;
   }
 
-  public void updateTime(String deviceId, long time) {
+  public void updateTime(Long deviceId, long time) {
     startTimeMap.putIfAbsent(deviceId, time);
     Long endTime = endTimeMap.get(deviceId);
     if (endTime == null || endTime < time) {

@@ -32,8 +32,8 @@ import org.apache.iotdb.tsfile.write.record.TSRecord;
 
 public class InsertPlan extends PhysicalPlan {
 
-  private String deviceId;
-  private String[] measurements;
+  private Long deviceId;
+  private Long[] measurements;
   private TSDataType[] dataTypes;
   private String[] values;
   private long time;
@@ -42,11 +42,11 @@ public class InsertPlan extends PhysicalPlan {
     super(false, OperatorType.INSERT);
   }
 
-  public InsertPlan(String deviceId, long insertTime, String measurement, String insertValue) {
+  public InsertPlan(Long deviceId, long insertTime, Long measurement, String insertValue) {
     super(false, OperatorType.INSERT);
     this.time = insertTime;
     this.deviceId = deviceId;
-    this.measurements = new String[] {measurement};
+    this.measurements = new Long[] {measurement};
     this.values = new String[] {insertValue};
   }
 
@@ -54,7 +54,7 @@ public class InsertPlan extends PhysicalPlan {
     super(false, OperatorType.INSERT);
     this.deviceId = tsRecord.deviceId;
     this.time = tsRecord.time;
-    this.measurements = new String[tsRecord.dataPointList.size()];
+    this.measurements = new Long[tsRecord.dataPointList.size()];
     this.dataTypes = new TSDataType[tsRecord.dataPointList.size()];
     this.values = new String[tsRecord.dataPointList.size()];
     for (int i = 0; i < tsRecord.dataPointList.size(); i++) {
@@ -64,7 +64,7 @@ public class InsertPlan extends PhysicalPlan {
     }
   }
 
-  public InsertPlan(String deviceId, long insertTime, String[] measurementList,
+  public InsertPlan(Long deviceId, long insertTime, Long[] measurementList,
       String[] insertValues) {
     super(false, Operator.OperatorType.INSERT);
     this.time = insertTime;
@@ -93,25 +93,25 @@ public class InsertPlan extends PhysicalPlan {
   public List<Path> getPaths() {
     List<Path> ret = new ArrayList<>();
 
-    for (String m : measurements) {
+    for (Long m : measurements) {
       ret.add(new Path(deviceId, m));
     }
     return ret;
   }
 
-  public String getDeviceId() {
+  public Long getDeviceId() {
     return this.deviceId;
   }
 
-  public void setDeviceId(String deviceId) {
+  public void setDeviceId(Long deviceId) {
     this.deviceId = deviceId;
   }
 
-  public String[] getMeasurements() {
+  public Long[] getMeasurements() {
     return this.measurements;
   }
 
-  public void setMeasurements(String[] measurements) {
+  public void setMeasurements(Long[] measurements) {
     this.measurements = measurements;
   }
 
@@ -151,7 +151,7 @@ public class InsertPlan extends PhysicalPlan {
     putString(buffer, deviceId);
 
     buffer.putInt(measurements.length);
-    for (String m : measurements) {
+    for (Long m : measurements) {
       putString(buffer, m);
     }
 
@@ -167,7 +167,7 @@ public class InsertPlan extends PhysicalPlan {
     this.deviceId = readString(buffer);
 
     int measurementSize = buffer.getInt();
-    this.measurements = new String[measurementSize];
+    this.measurements = new Long[measurementSize];
     for (int i = 0; i < measurementSize; i++) {
       measurements[i] = readString(buffer);
     }
