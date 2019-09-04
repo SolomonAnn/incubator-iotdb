@@ -18,10 +18,12 @@
  */
 package org.apache.iotdb.db.metadata;
 
+import java.io.Serializable;
+import java.util.*;
+
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,7 +39,6 @@ import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 /**
@@ -895,6 +896,36 @@ public class MTree implements Serializable {
     }
     for (MNode childNode : node.getChildren().values()) {
       findStorageGroup(childNode, path + "." + childNode.toString(), res);
+    }
+  }
+
+  /**
+   * Get all nodes at the given level in current Metadata Tree.
+   *
+   * @return a list contains all nodes at the given level
+   */
+  List<String> getNodesList(String nodeLevel) {
+    List<String> res = new ArrayList<>();
+    int level = Integer.parseInt(nodeLevel);
+    MNode rootNode;
+    if ((rootNode = getRoot()) != null) {
+      findNodes(rootNode, "root", res, level);
+    }
+    return res;
+  }
+
+  private void findNodes(MNode node, String path, List<String> res, int targetLevel) {
+    if (node == null) {
+      return;
+    }
+    if (targetLevel == 1) {
+      res.add(path);
+      return;
+    }
+    if (node.hasChildren()) {
+      for (MNode child : node.getChildren().values()) {
+        findNodes(child, path + "." + child.toString(), res, targetLevel - 1);
+      }
     }
   }
 

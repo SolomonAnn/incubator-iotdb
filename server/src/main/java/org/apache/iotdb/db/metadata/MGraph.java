@@ -248,6 +248,10 @@ public class MGraph implements Serializable {
     return mtree.getAllStorageGroup();
   }
 
+  List<String> getNodesList(String nodeLevel) {
+    return mtree.getNodesList(nodeLevel);
+  }
+
   List<String> getLeafNodePathInNextLevel(String path) throws PathErrorException {
     return mtree.getLeafNodePathInNextLevel(path);
   }
