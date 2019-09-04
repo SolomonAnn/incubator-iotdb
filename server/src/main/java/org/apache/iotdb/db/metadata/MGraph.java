@@ -32,6 +32,7 @@ import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 /**
@@ -337,6 +338,22 @@ public class MGraph implements Serializable {
    */
   public String getDeviceTypeByPath(String path) throws PathErrorException {
     return mtree.getDeviceTypeByPath(path);
+  }
+
+  public Long getDeviceIdByPath(String path) throws PathErrorException {
+    return mtree.getDeviceIdByPath(path);
+  }
+
+  public Long getMeasurementIdByPath(String path) throws PathErrorException {
+    return mtree.getMeasurementIdByPath(path);
+  }
+
+  public String getDevicePathById(Long id) throws PathErrorException {
+    return mtree.getDevicePathById(id);
+  }
+
+  public String getMeasurementPathById(Long id) throws PathErrorException {
+    return mtree.getMeasurementPathById(id);
   }
 
   /**

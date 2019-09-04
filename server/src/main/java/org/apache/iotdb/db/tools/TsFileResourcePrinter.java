@@ -53,7 +53,7 @@ public class TsFileResourcePrinter {
     System.err.println(String.format("analyzing %s ...", filename));
     resource.deSerialize();
 
-    for (String device : resource.getStartTimeMap().keySet()) {
+    for (Long device : resource.getStartTimeMap().keySet()) {
       System.out.println(String.format("device %s, start time %d (%s), end time %d (%s)", device,
           resource.getStartTimeMap().get(device),
           DatetimeUtils.convertMillsecondToZonedDateTime(resource.getStartTimeMap().get(device)),

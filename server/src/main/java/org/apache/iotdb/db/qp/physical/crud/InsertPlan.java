@@ -32,8 +32,8 @@ import org.apache.iotdb.tsfile.write.record.TSRecord;
 
 public class InsertPlan extends PhysicalPlan {
 
-  private Long deviceId;
-  private Long[] measurements;
+  private String device;
+  private String[] measurements;
   private TSDataType[] dataTypes;
   private String[] values;
   private long time;
@@ -42,19 +42,19 @@ public class InsertPlan extends PhysicalPlan {
     super(false, OperatorType.INSERT);
   }
 
-  public InsertPlan(Long deviceId, long insertTime, Long measurement, String insertValue) {
+  public InsertPlan(String device, long insertTime, String measurement, String insertValue) {
     super(false, OperatorType.INSERT);
     this.time = insertTime;
-    this.deviceId = deviceId;
-    this.measurements = new Long[] {measurement};
+    this.device = device;
+    this.measurements = new String[] {measurement};
     this.values = new String[] {insertValue};
   }
 
   public InsertPlan(TSRecord tsRecord) {
     super(false, OperatorType.INSERT);
-    this.deviceId = tsRecord.deviceId;
+    this.device = tsRecord.deviceId;
     this.time = tsRecord.time;
-    this.measurements = new Long[tsRecord.dataPointList.size()];
+    this.measurements = new String[tsRecord.dataPointList.size()];
     this.dataTypes = new TSDataType[tsRecord.dataPointList.size()];
     this.values = new String[tsRecord.dataPointList.size()];
     for (int i = 0; i < tsRecord.dataPointList.size(); i++) {
@@ -64,11 +64,10 @@ public class InsertPlan extends PhysicalPlan {
     }
   }
 
-  public InsertPlan(Long deviceId, long insertTime, Long[] measurementList,
-      String[] insertValues) {
+  public InsertPlan(String device, long insertTime, String[] measurementList, String[] insertValues) {
     super(false, Operator.OperatorType.INSERT);
     this.time = insertTime;
-    this.deviceId = deviceId;
+    this.device = device;
     this.measurements = measurementList;
     this.values = insertValues;
   }
@@ -93,25 +92,26 @@ public class InsertPlan extends PhysicalPlan {
   public List<Path> getPaths() {
     List<Path> ret = new ArrayList<>();
 
-    for (Long m : measurements) {
-      ret.add(new Path(deviceId, m));
+    for (String m : measurements) {
+      ret.add(new Path(device, m));
     }
     return ret;
   }
 
-  public Long getDeviceId() {
-    return this.deviceId;
+  public String getDevice() {
+    return this.device;
   }
 
-  public void setDeviceId(Long deviceId) {
-    this.deviceId = deviceId;
+
+  public void setDevice(String device) {
+    this.device = device;
   }
 
-  public Long[] getMeasurements() {
+  public String[] getMeasurements() {
     return this.measurements;
   }
 
-  public void setMeasurements(Long[] measurements) {
+  public void setMeasurements(String[] measurements) {
     this.measurements = measurements;
   }
 
@@ -132,14 +132,14 @@ public class InsertPlan extends PhysicalPlan {
       return false;
     }
     InsertPlan that = (InsertPlan) o;
-    return time == that.time && Objects.equals(deviceId, that.deviceId)
+    return time == that.time && Objects.equals(device, that.device)
         && Arrays.equals(measurements, that.measurements)
         && Arrays.equals(values, that.values);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(deviceId, time);
+    return Objects.hash(device, time);
   }
 
   @Override
@@ -148,10 +148,10 @@ public class InsertPlan extends PhysicalPlan {
     buffer.put((byte) type);
     buffer.putLong(time);
 
-    putString(buffer, deviceId);
+    putString(buffer, device);
 
     buffer.putInt(measurements.length);
-    for (Long m : measurements) {
+    for (String m : measurements) {
       putString(buffer, m);
     }
 
@@ -164,10 +164,10 @@ public class InsertPlan extends PhysicalPlan {
   @Override
   public void deserializeFrom(ByteBuffer buffer) {
     this.time = buffer.getLong();
-    this.deviceId = readString(buffer);
+    this.device = readString(buffer);
 
     int measurementSize = buffer.getInt();
-    this.measurements = new Long[measurementSize];
+    this.measurements = new String[measurementSize];
     for (int i = 0; i < measurementSize; i++) {
       measurements[i] = readString(buffer);
     }
@@ -181,6 +181,6 @@ public class InsertPlan extends PhysicalPlan {
 
   @Override
   public String toString() {
-    return "deviceId: " + deviceId + ", time: " + time;
+    return "deviceId: " + device + ", time: " + time;
   }
 }

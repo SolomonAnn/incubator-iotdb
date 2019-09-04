@@ -55,12 +55,7 @@ import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.version.SimpleFileVersionController;
 import org.apache.iotdb.db.engine.version.VersionController;
-import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
-import org.apache.iotdb.db.exception.MergeException;
-import org.apache.iotdb.db.exception.MetadataErrorException;
-import org.apache.iotdb.db.exception.ProcessorException;
-import org.apache.iotdb.db.exception.StorageGroupProcessorException;
-import org.apache.iotdb.db.exception.TsFileProcessorException;
+import org.apache.iotdb.db.exception.*;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
@@ -177,7 +172,7 @@ public class StorageGroupProcessor {
 
 
   public StorageGroupProcessor(String systemInfoDir, String storageGroupName)
-      throws ProcessorException {
+      throws ProcessorException, PathErrorException {
     this.storageGroupName = storageGroupName;
 
     // construct the file schema
@@ -201,7 +196,7 @@ public class StorageGroupProcessor {
     recover();
   }
 
-  private void recover() throws ProcessorException {
+  private void recover() throws ProcessorException, PathErrorException {
     logger.info("recover Storage Group  {}", storageGroupName);
 
     try {
@@ -274,7 +269,7 @@ public class StorageGroupProcessor {
     }
   }
 
-  private void recoverSeqFiles(List<TsFileResource> tsFiles) throws ProcessorException {
+  private void recoverSeqFiles(List<TsFileResource> tsFiles) throws ProcessorException, PathErrorException {
 
     for (TsFileResource tsFileResource : tsFiles) {
       sequenceFileList.add(tsFileResource);
@@ -285,7 +280,7 @@ public class StorageGroupProcessor {
     }
   }
 
-  private void recoverUnseqFiles(List<TsFileResource> tsFiles) throws ProcessorException {
+  private void recoverUnseqFiles(List<TsFileResource> tsFiles) throws ProcessorException, PathErrorException {
     for (TsFileResource tsFileResource : tsFiles) {
       unSequenceFileList.add(tsFileResource);
       TsFileRecoverPerformer recoverPerformer = new TsFileRecoverPerformer(storageGroupName + "-",
@@ -334,27 +329,29 @@ public class StorageGroupProcessor {
     }
   }
 
-  public boolean insert(InsertPlan insertPlan) {
+  public boolean insert(InsertPlan insertPlan) throws PathErrorException {
     writeLock();
     try {
       // init map
-      latestTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
-      latestFlushedTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+      latestTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
+      latestFlushedTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
 
       // insert to sequence or unSequence file
       return insertToTsFileProcessor(insertPlan,
-          insertPlan.getTime() > latestFlushedTimeForEachDevice.get(insertPlan.getDeviceId()));
+          insertPlan.getTime() > latestFlushedTimeForEachDevice.get(deviceId));
     } finally {
       writeUnlock();
     }
   }
 
-  public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) {
+  public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws PathErrorException {
     writeLock();
     try {
       // init map
-      latestTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
-      latestFlushedTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
+      latestTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
+      latestFlushedTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
 
       Integer[] results = new Integer[batchInsertPlan.getRowCount()];
       List<Integer> sequenceIndexes = new ArrayList<>();
@@ -363,7 +360,7 @@ public class StorageGroupProcessor {
       for (int i = 0; i < batchInsertPlan.getRowCount(); i++) {
         results[i] = TSStatusType.SUCCESS_STATUS.getStatusCode();
         if (batchInsertPlan.getTimes()[i] > latestFlushedTimeForEachDevice
-            .get(batchInsertPlan.getDeviceId())) {
+            .get(deviceId)) {
           sequenceIndexes.add(i);
         } else {
           unsequenceIndexes.add(i);
@@ -384,7 +381,7 @@ public class StorageGroupProcessor {
   }
 
   private void insertBatchToTsFileProcessor(BatchInsertPlan batchInsertPlan,
-      List<Integer> indexes, boolean sequence, Integer[] results) {
+      List<Integer> indexes, boolean sequence, Integer[] results) throws PathErrorException {
 
     TsFileProcessor tsFileProcessor = getOrCreateTsFileProcessor(sequence);
     if (tsFileProcessor == null) {
@@ -395,10 +392,11 @@ public class StorageGroupProcessor {
     }
 
     boolean result = tsFileProcessor.insertBatch(batchInsertPlan, indexes, results);
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
 
     // try to update the latest time of the device of this tsRecord
-    if (result && latestTimeForEachDevice.get(batchInsertPlan.getDeviceId()) < batchInsertPlan.getMaxTime()) {
-      latestTimeForEachDevice.put(batchInsertPlan.getDeviceId(), batchInsertPlan.getMaxTime());
+    if (result && latestTimeForEachDevice.get(deviceId) < batchInsertPlan.getMaxTime()) {
+      latestTimeForEachDevice.put(deviceId, batchInsertPlan.getMaxTime());
     }
 
     // check memtable size and may asyncTryToFlush the work memtable
@@ -415,7 +413,7 @@ public class StorageGroupProcessor {
     }
   }
 
-  private boolean insertToTsFileProcessor(InsertPlan insertPlan, boolean sequence) {
+  private boolean insertToTsFileProcessor(InsertPlan insertPlan, boolean sequence) throws PathErrorException {
     TsFileProcessor tsFileProcessor;
     boolean result;
 
@@ -427,10 +425,11 @@ public class StorageGroupProcessor {
 
     // insert TsFileProcessor
     result = tsFileProcessor.insert(insertPlan);
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
 
     // try to update the latest time of the device of this tsRecord
-    if (result && latestTimeForEachDevice.get(insertPlan.getDeviceId()) < insertPlan.getTime()) {
-      latestTimeForEachDevice.put(insertPlan.getDeviceId(), insertPlan.getTime());
+    if (result && latestTimeForEachDevice.get(deviceId) < insertPlan.getTime()) {
+      latestTimeForEachDevice.put(deviceId, insertPlan.getTime());
     }
 
     // check memtable size and may asyncTryToFlush the work memtable
@@ -594,7 +593,7 @@ public class StorageGroupProcessor {
 
   // TODO need a read lock, please consider the concurrency with flush manager threads.
   public QueryDataSource query(String deviceId, String measurementId, QueryContext context,
-      JobFileManager filePathsManager) {
+      JobFileManager filePathsManager) throws PathErrorException {
     insertLock.readLock().lock();
     mergeLock.readLock().lock();
     synchronized (lruForSensorUsedInQuery) {
@@ -657,15 +656,15 @@ public class StorageGroupProcessor {
    * @return fill unsealed tsfile resources with memory data and ChunkMetadataList of data in disk
    */
   private List<TsFileResource> getFileReSourceListForQuery(List<TsFileResource> tsFileResources,
-      String deviceId, String measurementId, QueryContext context) {
+      String device, String measurement, QueryContext context) throws PathErrorException {
 
-    MeasurementSchema mSchema = schema.getMeasurementSchema(measurementId);
+    MeasurementSchema mSchema = schema.getMeasurementSchema(MManager.getInstance().getMeasurementIdByPath(measurement));
     TSDataType dataType = mSchema.getType();
 
     List<TsFileResource> tsfileResourcesForQuery = new ArrayList<>();
     for (TsFileResource tsFileResource : tsFileResources) {
       // TODO: try filtering files if the query contains time filter
-      if (!tsFileResource.containsDevice(deviceId)) {
+      if (!tsFileResource.containsDevice(device)) {
         continue;
       }
       if (!tsFileResource.getStartTimeMap().isEmpty()) {
@@ -678,7 +677,7 @@ public class StorageGroupProcessor {
             Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair;
             pair = tsFileResource
                 .getUnsealedFileProcessor()
-                .query(deviceId, measurementId, dataType, mSchema.getProps(), context);
+                .query(device, measurement, dataType, mSchema.getProps(), context);
             tsfileResourcesForQuery
                 .add(new TsFileResource(tsFileResource.getFile(),
                     tsFileResource.getStartTimeMap(),

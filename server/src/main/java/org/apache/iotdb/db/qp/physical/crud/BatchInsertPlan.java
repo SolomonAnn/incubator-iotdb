@@ -32,7 +32,7 @@ import org.apache.iotdb.tsfile.utils.BytesUtils;
 
 public class BatchInsertPlan extends PhysicalPlan {
 
-  private String deviceId;
+  private String device;
   private String[] measurements;
   private TSDataType[] dataTypes;
 
@@ -53,15 +53,15 @@ public class BatchInsertPlan extends PhysicalPlan {
     super(false, OperatorType.BATCHINSERT);
   }
 
-  public BatchInsertPlan(String deviceId, List<String> measurements) {
+  public BatchInsertPlan(String device, List<String> measurements) {
     super(false, OperatorType.BATCHINSERT);
-    this.deviceId = deviceId;
+    this.device = device;
     setMeasurements(measurements);
   }
 
-  public BatchInsertPlan(String deviceId, String[] measurements, List<Integer> dataTypes) {
+  public BatchInsertPlan(String device, String[] measurements, List<Integer> dataTypes) {
     super(false, OperatorType.BATCHINSERT);
-    this.deviceId = deviceId;
+    this.device = device;
     this.measurements = measurements;
     setDataTypes(dataTypes);
   }
@@ -74,7 +74,7 @@ public class BatchInsertPlan extends PhysicalPlan {
     }
     List<Path> ret = new ArrayList<>();
     for (String m : measurements) {
-      ret.add(new Path(deviceId, m));
+      ret.add(new Path(device, m));
     }
     paths = ret;
     return ret;
@@ -85,7 +85,7 @@ public class BatchInsertPlan extends PhysicalPlan {
     int type = PhysicalPlanType.BATCHINSERT.ordinal();
     buffer.put((byte) type);
 
-    putString(buffer, deviceId);
+    putString(buffer, device);
 
     buffer.putInt(measurements.length);
     for (String m : measurements) {
@@ -171,7 +171,7 @@ public class BatchInsertPlan extends PhysicalPlan {
 
   @Override
   public void deserializeFrom(ByteBuffer buffer) {
-    this.deviceId = readString(buffer);
+    this.device = readString(buffer);
 
     int measurementSize = buffer.getInt();
     this.measurements = new String[measurementSize];
@@ -192,12 +192,12 @@ public class BatchInsertPlan extends PhysicalPlan {
   }
 
 
-  public String getDeviceId() {
-    return deviceId;
+  public String getDevice() {
+    return device;
   }
 
-  public void setDeviceId(String deviceId) {
-    this.deviceId = deviceId;
+  public void setDevice(String device) {
+    this.device = device;
   }
 
   public String[] getMeasurements() {

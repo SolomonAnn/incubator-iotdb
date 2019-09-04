@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -35,12 +36,12 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
  */
 public interface IMemTable {
 
-  Map<String, Map<String, IWritableMemChunk>> getMemTableMap();
+  Map<Long, Map<Long, IWritableMemChunk>> getMemTableMap();
 
-  void write(String deviceId, String measurement, TSDataType dataType,
-      long insertTime, String insertValue);
+  void write(String device, String measurement, TSDataType dataType,
+      long insertTime, String insertValue) throws PathErrorException;
 
-  void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes);
+  void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException;
 
   /**
    * @return the number of points
@@ -52,9 +53,9 @@ public interface IMemTable {
    */
   long memSize();
 
-  void insert(InsertPlan insertPlan);
+  void insert(InsertPlan insertPlan) throws PathErrorException;
 
-  void insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes);
+  void insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException;
 
   ReadOnlyMemChunk query(String deviceId, String measurement, TSDataType dataType,
       Map<String, String> props);

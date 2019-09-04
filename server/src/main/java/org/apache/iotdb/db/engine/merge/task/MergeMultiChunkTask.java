@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -31,6 +31,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.merge.manage.MergeContext;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
@@ -40,6 +41,8 @@ import org.apache.iotdb.db.engine.merge.selector.IMergePathSelector;
 import org.apache.iotdb.db.engine.merge.selector.NaivePathSelector;
 import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.query.reader.IPointReader;
 import org.apache.iotdb.db.utils.MergeUtils;
 import org.apache.iotdb.db.utils.MergeUtils.MetaListEntry;
@@ -83,8 +86,8 @@ class MergeMultiChunkTask {
   private List<Path> currMergingPaths = new ArrayList<>();
 
   MergeMultiChunkTask(MergeContext context, String taskName, MergeLogger mergeLogger,
-      MergeResource mergeResource, boolean fullMerge, List<Path> unmergedSeries,
-      int concurrentMergeSeriesNum) {
+                      MergeResource mergeResource, boolean fullMerge, List<Path> unmergedSeries,
+                      int concurrentMergeSeriesNum) {
     this.mergeContext = context;
     this.taskName = taskName;
     this.mergeLogger = mergeLogger;
@@ -94,7 +97,7 @@ class MergeMultiChunkTask {
     this.concurrentMergeSeriesNum = concurrentMergeSeriesNum;
   }
 
-  void mergeSeries() throws IOException {
+  void mergeSeries() throws IOException, PathErrorException {
     if (logger.isInfoEnabled()) {
       logger.info("{} starts to merge {} series", taskName, unmergedSeries.size());
     }
@@ -131,7 +134,7 @@ class MergeMultiChunkTask {
     }
   }
 
-  private void mergePaths() throws IOException {
+  private void mergePaths() throws IOException, PathErrorException {
     mergeLogger.logTSStart(currMergingPaths);
     IPointReader[] unseqReaders;
     unseqReaders = resource.getUnseqReaders(currMergingPaths);
@@ -149,9 +152,10 @@ class MergeMultiChunkTask {
   }
 
   private void pathsMergeOneFile(int seqFileIdx, IPointReader[] unseqReaders)
-      throws IOException {
+      throws IOException, PathErrorException {
     TsFileResource currTsFile = resource.getSeqFiles().get(seqFileIdx);
-    String deviceId = currMergingPaths.get(0).getDevice();
+    String device = currMergingPaths.get(0).getDevice();
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(device);
     Long currDeviceMinTime = currTsFile.getStartTimeMap().get(deviceId);
     if (currDeviceMinTime == null) {
       return;
@@ -190,7 +194,7 @@ class MergeMultiChunkTask {
       mergeFileWriter.addSchema(schema);
     }
     // merge unseq data with seq data in this file or small chunks in this file into a larger chunk
-    mergeFileWriter.startChunkGroup(deviceId);
+    mergeFileWriter.startChunkGroup(device);
     boolean dataWritten = mergeChunks(seqChunkMeta, isLastFile, fileSequenceReader, unseqReaders,
         mergeFileWriter, currTsFile);
     if (dataWritten) {
@@ -215,8 +219,8 @@ class MergeMultiChunkTask {
   }
 
   private boolean mergeChunks(List<ChunkMetaData>[] seqChunkMeta, boolean isLastFile,
-      TsFileSequenceReader reader, IPointReader[] unseqReaders,
-      RestorableTsFileIOWriter mergeFileWriter, TsFileResource currFile)
+                              TsFileSequenceReader reader, IPointReader[] unseqReaders,
+                              RestorableTsFileIOWriter mergeFileWriter, TsFileResource currFile)
       throws IOException {
     int[] ptWrittens = new int[seqChunkMeta.length];
     int mergeChunkSubTaskNum = IoTDBDescriptor.getInstance().getConfig().getMergeChunkSubThreadNum();
@@ -280,15 +284,15 @@ class MergeMultiChunkTask {
 
       boolean chunkOverflowed = MergeUtils.isChunkOverflowed(currTimeValuePairs[pathIdx], currMeta);
       boolean chunkTooSmall = MergeUtils
-              .isChunkTooSmall(ptWrittens[pathIdx], currMeta, isLastChunk, minChunkPointNum);
+          .isChunkTooSmall(ptWrittens[pathIdx], currMeta, isLastChunk, minChunkPointNum);
 
       Chunk chunk;
       synchronized (reader) {
         chunk = reader.readMemChunk(currMeta);
       }
       ptWrittens[pathIdx] = mergeChunkV2(currMeta, chunkOverflowed, chunkTooSmall, chunk,
-              ptWrittens[pathIdx], pathIdx, mergeFileWriter, unseqReaders[pathIdx], chunkWriter,
-              currFile);
+          ptWrittens[pathIdx], pathIdx, mergeFileWriter, unseqReaders[pathIdx], chunkWriter,
+          currFile);
 
       if (!isLastChunk) {
         metaListEntry.next();
@@ -298,7 +302,7 @@ class MergeMultiChunkTask {
         // data will be merged with the last chunk in the seqFiles
         if (isLastFile && currTimeValuePairs[pathIdx] != null) {
           ptWrittens[pathIdx] += writeRemainingUnseq(chunkWriter, unseqReaders[pathIdx], Long.MAX_VALUE,
-                  pathIdx);
+              pathIdx);
           mergedChunkNum.incrementAndGet();
         }
         // the last merged chunk may still be smaller than the threshold, flush it anyway
@@ -313,31 +317,30 @@ class MergeMultiChunkTask {
 
   /**
    * merge a sequence chunk SK
-   *
+   * <p>
    * 1. no need to write the chunk to .merge file when:
    * isn't full merge &
    * there isn't unclosed chunk before &
    * SK is big enough &
    * SK isn't overflowed &
    * SK isn't modified
-   *
-   *
+   * <p>
+   * <p>
    * 2. write SK to .merge.file without compressing when:
    * is full merge &
    * there isn't unclosed chunk before &
    * SK is big enough &
    * SK isn't overflowed &
    * SK isn't modified
-   *
+   * <p>
    * 3. other cases: need to unCompress the chunk and write
    * 3.1 SK isn't overflowed
    * 3.2 SK is overflowed
-   *
    */
   private int mergeChunkV2(ChunkMetaData currMeta, boolean chunkOverflowed,
-      boolean chunkTooSmall,Chunk chunk, int lastUnclosedChunkPoint, int pathIdx,
-      TsFileIOWriter mergeFileWriter, IPointReader unseqReader,
-      IChunkWriter chunkWriter, TsFileResource currFile) throws IOException {
+                           boolean chunkTooSmall, Chunk chunk, int lastUnclosedChunkPoint, int pathIdx,
+                           TsFileIOWriter mergeFileWriter, IPointReader unseqReader,
+                           IChunkWriter chunkWriter, TsFileResource currFile) throws IOException {
 
     int unclosedChunkPoint = lastUnclosedChunkPoint;
     boolean chunkModified = currMeta.getDeletedAt() > Long.MIN_VALUE;
@@ -386,7 +389,7 @@ class MergeMultiChunkTask {
   }
 
   private int writeRemainingUnseq(IChunkWriter chunkWriter,
-      IPointReader unseqReader, long timeLimit, int pathIdx) throws IOException {
+                                  IPointReader unseqReader, long timeLimit, int pathIdx) throws IOException {
     int ptWritten = 0;
     while (currTimeValuePairs[pathIdx] != null
         && currTimeValuePairs[pathIdx].getTimestamp() < timeLimit) {
@@ -399,7 +402,7 @@ class MergeMultiChunkTask {
   }
 
   private int writeChunkWithUnseq(Chunk chunk, IChunkWriter chunkWriter, IPointReader unseqReader,
-      long chunkLimitTime, int pathIdx) throws IOException {
+                                  long chunkLimitTime, int pathIdx) throws IOException {
     int cnt = 0;
     ChunkReader chunkReader = new ChunkReaderWithoutFilter(chunk);
     while (chunkReader.hasNextBatch()) {
@@ -411,7 +414,7 @@ class MergeMultiChunkTask {
   }
 
   private int mergeWriteBatch(BatchData batchData, IChunkWriter chunkWriter,
-      IPointReader unseqReader, int pathIdx) throws IOException {
+                              IPointReader unseqReader, int pathIdx) throws IOException {
     int cnt = 0;
     for (int i = 0; i < batchData.length(); i++) {
       long time = batchData.getTimeByIndex(i);

@@ -32,6 +32,7 @@ import java.util.Map.Entry;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.version.SysTimeVersionController;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -75,7 +76,7 @@ public class TsFileProcessorTest {
 
   @Test
   public void testWriteAndFlush()
-      throws WriteProcessException, IOException, TsFileProcessorException {
+      throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
         SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -122,7 +123,7 @@ public class TsFileProcessorTest {
 
   @Test
   public void testWriteAndRestoreMetadata()
-      throws IOException {
+      throws IOException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
         SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -189,7 +190,7 @@ public class TsFileProcessorTest {
 
   @Test
   public void testMultiFlush()
-      throws WriteProcessException, IOException, TsFileProcessorException {
+      throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
         SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -225,14 +226,14 @@ public class TsFileProcessorTest {
 
   @Test
   public void testWriteAndClose()
-      throws WriteProcessException, IOException {
+      throws WriteProcessException, IOException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
         SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE,
         unsealedTsFileProcessor -> {
           TsFileResource resource = unsealedTsFileProcessor.getTsFileResource();
           synchronized (resource) {
-            for (Entry<String, Long> startTime : resource.getStartTimeMap().entrySet()) {
-              String deviceId = startTime.getKey();
+            for (Entry<Long, Long> startTime : resource.getStartTimeMap().entrySet()) {
+              Long deviceId = startTime.getKey();
               resource.getEndTimeMap().put(deviceId, resource.getStartTimeMap().get(deviceId));
             }
             try {

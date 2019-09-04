@@ -81,7 +81,7 @@ public abstract class PhysicalPlan {
     throw new UnsupportedOperationException("serialize of unimplemented");
   }
 
-  protected void putString(ByteBuffer buffer, Long value) {
+  protected void putString(ByteBuffer buffer, String value) {
     if (value == null) {
       buffer.putInt(NULL_VALUE_LEN);
     } else {
@@ -89,7 +89,7 @@ public abstract class PhysicalPlan {
     }
   }
 
-  protected Long readString(ByteBuffer buffer) {
+  protected String readString(ByteBuffer buffer) {
     int valueLen = buffer.getInt();
     if (valueLen == NULL_VALUE_LEN) {
       return null;

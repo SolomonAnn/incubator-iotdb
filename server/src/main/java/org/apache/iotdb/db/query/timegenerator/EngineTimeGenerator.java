@@ -19,6 +19,8 @@
 package org.apache.iotdb.db.query.timegenerator;
 
 import java.io.IOException;
+
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -39,12 +41,12 @@ public class EngineTimeGenerator implements TimeGenerator {
    * Constructor of EngineTimeGenerator.
    */
   public EngineTimeGenerator(IExpression expression, QueryContext context)
-      throws StorageEngineException {
+      throws StorageEngineException, PathErrorException {
     this.expression = expression;
     initNode(context);
   }
 
-  private void initNode(QueryContext context) throws StorageEngineException {
+  private void initNode(QueryContext context) throws StorageEngineException, PathErrorException {
     EngineNodeConstructor engineNodeConstructor = new EngineNodeConstructor();
     this.operatorNode = engineNodeConstructor.construct(expression, context);
   }

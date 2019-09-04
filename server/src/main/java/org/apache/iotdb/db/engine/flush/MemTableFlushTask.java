@@ -23,6 +23,8 @@ import org.apache.iotdb.db.engine.memtable.ChunkBufferPool;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.exception.FlushRunTimeException;
+import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -73,9 +75,15 @@ public class MemTableFlushTask {
   public void syncFlushMemTable() throws ExecutionException, InterruptedException {
     long start = System.currentTimeMillis();
     long sortTime = 0;
-    for (String deviceId : memTable.getMemTableMap().keySet()) {
-      encodingTaskQueue.add(new StartFlushGroupIOTask(deviceId));
-      for (String measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
+    for (Long deviceId : memTable.getMemTableMap().keySet()) {
+      try {
+        String device = MManager.getInstance().getDevicePathById(deviceId);
+        encodingTaskQueue.add(new StartFlushGroupIOTask(device));
+      } catch (PathErrorException e) {
+        logger.error("Device id %d is not right.", deviceId);
+      }
+
+      for (Long measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
         long startTime = System.currentTimeMillis();
         IWritableMemChunk series = memTable.getMemTableMap().get(deviceId).get(measurementId);
         MeasurementSchema desc = schema.getMeasurementSchema(measurementId);
@@ -99,8 +107,7 @@ public class MemTableFlushTask {
 
 
   private Runnable encodingTask = new Runnable() {
-    private void writeOneSeries(TVList tvPairs, IChunkWriter seriesWriterImpl,
-        TSDataType dataType){
+    private void writeOneSeries(TVList tvPairs, IChunkWriter seriesWriterImpl, TSDataType dataType){
       for (int i = 0; i < tvPairs.size(); i++) {
         long time = tvPairs.getTime(i);
 
@@ -183,49 +190,49 @@ public class MemTableFlushTask {
   };
 
   private Runnable ioTask = () -> {
-      long ioTime = 0;
-      boolean returnWhenNoTask = false;
-      logger.debug("Storage group {} memtable {}, start io.", storageGroup, memTable.getVersion());
-      while (true) {
-        if (noMoreIOTask) {
-          returnWhenNoTask = true;
-        }
-        Object ioMessage = ioTaskQueue.poll();
-        if (ioMessage == null) {
-          if (returnWhenNoTask) {
-            break;
-          }
-          try {
-            Thread.sleep(10);
-          } catch (InterruptedException e) {
-            logger.error("Storage group {} memtable, io task is interrupted.", storageGroup
-                , memTable.getVersion(), e);
-            Thread.currentThread().interrupt();
-          }
-        } else {
-          long starTime = System.currentTimeMillis();
-          try {
-            if (ioMessage instanceof StartFlushGroupIOTask) {
-              writer.startChunkGroup(((StartFlushGroupIOTask) ioMessage).deviceId);
-            } else if (ioMessage instanceof IChunkWriter) {
-              ChunkWriterImpl chunkWriter = (ChunkWriterImpl) ioMessage;
-              chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
-              ChunkBufferPool.getInstance().putBack(chunkWriter.getChunkBuffer());
-            } else {
-              EndChunkGroupIoTask endGroupTask = (EndChunkGroupIoTask) ioMessage;
-              writer.endChunkGroup(endGroupTask.version);
-            }
-          } catch (IOException e) {
-            logger.error("Storage group {} memtable {}, io task meets error.", storageGroup,
-                memTable.getVersion(), e);
-            throw new FlushRunTimeException(e);
-          }
-          ioTime += System.currentTimeMillis() - starTime;
-        }
+    long ioTime = 0;
+    boolean returnWhenNoTask = false;
+    logger.debug("Storage group {} memtable {}, start io.", storageGroup, memTable.getVersion());
+    while (true) {
+      if (noMoreIOTask) {
+        returnWhenNoTask = true;
       }
-      logger.debug("flushing a memtable {} in storage group {}, io cost {}ms", memTable.getVersion(),
-          storageGroup, ioTime);
-    };
+      Object ioMessage = ioTaskQueue.poll();
+      if (ioMessage == null) {
+        if (returnWhenNoTask) {
+          break;
+        }
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          logger.error("Storage group {} memtable, io task is interrupted.", storageGroup
+              , memTable.getVersion(), e);
+          Thread.currentThread().interrupt();
+        }
+      } else {
+        long starTime = System.currentTimeMillis();
+        try {
+          if (ioMessage instanceof StartFlushGroupIOTask) {
+            writer.startChunkGroup(((StartFlushGroupIOTask) ioMessage).device);
+          } else if (ioMessage instanceof IChunkWriter) {
+            ChunkWriterImpl chunkWriter = (ChunkWriterImpl) ioMessage;
+            chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
+            ChunkBufferPool.getInstance().putBack(chunkWriter.getChunkBuffer());
+          } else {
+            EndChunkGroupIoTask endGroupTask = (EndChunkGroupIoTask) ioMessage;
+            writer.endChunkGroup(endGroupTask.version);
+          }
+        } catch (IOException e) {
+          logger.error("Storage group {} memtable {}, io task meets error.", storageGroup,
+              memTable.getVersion(), e);
+          throw new FlushRunTimeException(e);
+        }
+        ioTime += System.currentTimeMillis() - starTime;
+      }
+    }
+    logger.debug("flushing a memtable {} in storage group {}, io cost {}ms", memTable.getVersion(),
+        storageGroup, ioTime);
+  };
 
   static class EndChunkGroupIoTask {
     private long version;
@@ -236,10 +243,10 @@ public class MemTableFlushTask {
   }
 
   static class StartFlushGroupIOTask {
-    private String deviceId;
+    private String device;
 
-    StartFlushGroupIOTask(String deviceId) {
-      this.deviceId = deviceId;
+    StartFlushGroupIOTask(String device) {
+      this.device = device;
     }
   }
 

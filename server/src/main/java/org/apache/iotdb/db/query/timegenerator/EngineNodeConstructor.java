@@ -22,6 +22,8 @@ package org.apache.iotdb.db.query.timegenerator;
 import static org.apache.iotdb.tsfile.read.expression.ExpressionType.SERIES;
 
 import java.io.IOException;
+
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.reader.seriesRelated.SeriesReaderWithValueFilter;
@@ -47,7 +49,7 @@ public class EngineNodeConstructor extends AbstractNodeConstructor {
    */
   @Override
   public Node construct(IExpression expression, QueryContext context)
-      throws StorageEngineException {
+      throws StorageEngineException, PathErrorException {
     if (expression.getType() == SERIES) {
       try {
         Filter filter = ((SingleSeriesExpression) expression).getFilter();

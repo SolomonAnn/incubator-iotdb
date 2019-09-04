@@ -51,7 +51,7 @@ public class EngineQueryRouter implements IEngineQueryRouter {
 
   @Override
   public QueryDataSet query(QueryExpression queryExpression, QueryContext context)
-      throws StorageEngineException {
+      throws StorageEngineException, PathErrorException {
 
     if (queryExpression.hasQueryFilter()) {
       try {

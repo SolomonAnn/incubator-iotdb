@@ -30,7 +30,7 @@ public class PrimitiveMemTable extends AbstractMemTable {
   public PrimitiveMemTable() {
   }
 
-  public PrimitiveMemTable(Map<String, Map<String, IWritableMemChunk>> memTableMap) {
+  public PrimitiveMemTable(Map<Long, Map<Long, IWritableMemChunk>> memTableMap) {
     super(memTableMap);
   }
 
@@ -41,7 +41,7 @@ public class PrimitiveMemTable extends AbstractMemTable {
 
   @Override
   public IMemTable copy() {
-    Map<String, Map<String, IWritableMemChunk>> newMap = new HashMap<>(getMemTableMap());
+    Map<Long, Map<Long, IWritableMemChunk>> newMap = new HashMap<>(getMemTableMap());
 
     return new PrimitiveMemTable(newMap);
   }

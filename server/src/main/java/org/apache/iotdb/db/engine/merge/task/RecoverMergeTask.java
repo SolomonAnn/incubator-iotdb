@@ -34,6 +34,7 @@ import org.apache.iotdb.db.engine.merge.recover.MergeLogger;
 import org.apache.iotdb.db.engine.merge.selector.MaxSeriesMergeFileSelector;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.MetadataErrorException;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.utils.MergeUtils;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -58,7 +59,7 @@ public class RecoverMergeTask extends MergeTask {
     super(seqFiles, unseqFiles, storageGroupSysDir, callback, taskName, fullMerge, storageGroupName);
   }
 
-  public void recoverMerge(boolean continueMerge) throws IOException, MetadataErrorException {
+  public void recoverMerge(boolean continueMerge) throws IOException, MetadataErrorException, PathErrorException {
     File logFile = new File(storageGroupSysDir, MergeLogger.MERGE_LOG_NAME);
     if (!logFile.exists()) {
       logger.info("{} no merge.log, merge recovery ends", taskName);
@@ -94,7 +95,7 @@ public class RecoverMergeTask extends MergeTask {
     }
   }
 
-  private void resumeAfterFilesLogged(boolean continueMerge) throws IOException {
+  private void resumeAfterFilesLogged(boolean continueMerge) throws IOException, PathErrorException {
     if (continueMerge) {
       resumeMergeProgress();
       calculateConcurrentSeriesNum();

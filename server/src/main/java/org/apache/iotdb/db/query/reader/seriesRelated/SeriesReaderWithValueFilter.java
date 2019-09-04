@@ -19,6 +19,8 @@
 package org.apache.iotdb.db.query.reader.seriesRelated;
 
 import java.io.IOException;
+
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.reader.IBatchReader;
@@ -46,7 +48,7 @@ public class SeriesReaderWithValueFilter extends SeriesReaderWithoutValueFilter 
   private TimeValuePair timeValuePair;
 
   public SeriesReaderWithValueFilter(Path seriesPath, Filter filter, QueryContext context)
-      throws StorageEngineException, IOException {
+      throws StorageEngineException, IOException, PathErrorException {
     super(seriesPath, filter, context, false);
     this.filter = filter;
   }

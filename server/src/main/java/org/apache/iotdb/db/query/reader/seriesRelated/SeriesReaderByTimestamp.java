@@ -20,6 +20,7 @@ package org.apache.iotdb.db.query.reader.seriesRelated;
 
 import java.io.IOException;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -39,7 +40,7 @@ import org.apache.iotdb.tsfile.read.common.Path;
 public class SeriesReaderByTimestamp extends PriorityMergeReaderByTimestamp {
 
   public SeriesReaderByTimestamp(Path seriesPath, QueryContext context)
-      throws StorageEngineException, IOException {
+      throws StorageEngineException, IOException, PathErrorException {
     QueryDataSource queryDataSource = QueryResourceManager.getInstance()
         .getQueryDataSource(seriesPath, context);
 

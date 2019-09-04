@@ -22,6 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -64,7 +65,7 @@ public class QueryResourceManager {
 
 
   public QueryDataSource getQueryDataSource(Path selectedPath,
-      QueryContext context) throws StorageEngineException {
+      QueryContext context) throws StorageEngineException, PathErrorException {
 
     SingleSeriesExpression singleSeriesExpression = new SingleSeriesExpression(selectedPath, null);
     return StorageEngine

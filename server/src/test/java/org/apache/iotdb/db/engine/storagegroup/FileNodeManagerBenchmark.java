@@ -115,7 +115,7 @@ public class FileNodeManagerBenchmark {
           TSRecord tsRecord = getRecord(deltaObject, time);
           StorageEngine.getInstance().insert(new InsertPlan(tsRecord));
         }
-      } catch (StorageEngineException e) {
+      } catch (StorageEngineException | PathErrorException e) {
         e.printStackTrace();
       } finally {
         latch.countDown();

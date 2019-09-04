@@ -110,7 +110,7 @@ public class Schema {
 
   }
 
-  public MeasurementSchema getMeasurementSchema(String measurementId) {
+  public MeasurementSchema getMeasurementSchema(Long measurementId) {
     return measurementSchemaMap.get(measurementId);
   }
 

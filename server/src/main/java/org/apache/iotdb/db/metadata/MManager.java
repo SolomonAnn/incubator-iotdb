@@ -1193,6 +1193,22 @@ public class MManager {
     }
   }
 
+  public Long getDeviceIdByPath(String path) throws PathErrorException {
+    return mgraph.getDeviceIdByPath(path);
+  }
+
+  public Long getMeasurementIdByPath(String path) throws PathErrorException {
+    return mgraph.getMeasurementIdByPath(path);
+  }
+
+  public String getDevicePathById(Long id) throws PathErrorException {
+    return mgraph.getDevicePathById(id);
+  }
+
+  public String getMeasurementPathById(Long id) throws PathErrorException {
+    return mgraph.getMeasurementPathById(id);
+  }
+
   /**
    * Only for test
    */

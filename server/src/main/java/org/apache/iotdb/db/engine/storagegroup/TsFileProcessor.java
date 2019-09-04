@@ -42,7 +42,9 @@ import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.CloseTsFileCallBack;
 import org.apache.iotdb.db.engine.version.VersionController;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
@@ -133,7 +135,7 @@ public class TsFileProcessor {
    * @param insertPlan physical plan of insertion
    * @return succeed or fail
    */
-  public boolean insert(InsertPlan insertPlan) {
+  public boolean insert(InsertPlan insertPlan) throws PathErrorException {
 
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
@@ -147,12 +149,14 @@ public class TsFileProcessor {
         return false;
       }
     }
+
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
     // update start time of this memtable
-    tsFileResource.updateStartTime(insertPlan.getDeviceId(), insertPlan.getTime());
+    tsFileResource.updateStartTime(deviceId, insertPlan.getTime());
     //for sequence tsfile, we update the endTime only when the file is prepared to be closed.
     //for unsequence tsfile, we have to update the endTime for each insertion.
     if (!sequence) {
-      tsFileResource.updateEndTime(insertPlan.getDeviceId(), insertPlan.getTime());
+      tsFileResource.updateEndTime(deviceId, insertPlan.getTime());
     }
 
     // insert insertPlan to the work memtable
@@ -162,7 +166,7 @@ public class TsFileProcessor {
   }
 
   public boolean insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes,
-      Integer[] results) {
+      Integer[] results) throws PathErrorException {
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
@@ -179,12 +183,14 @@ public class TsFileProcessor {
       }
     }
 
-    tsFileResource.updateStartTime(batchInsertPlan.getDeviceId(), batchInsertPlan.getMinTime());
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
+
+    tsFileResource.updateStartTime(deviceId, batchInsertPlan.getMinTime());
 
     //for sequence tsfile, we update the endTime only when the file is prepared to be closed.
     //for unsequence tsfile, we have to update the endTime for each insertion.
     if (!sequence) {
-      tsFileResource.updateEndTime(batchInsertPlan.getDeviceId(), batchInsertPlan.getMaxTime());
+      tsFileResource.updateEndTime(deviceId, batchInsertPlan.getMaxTime());
     }
 
     // insert insertPlan to the work memtable
@@ -391,7 +397,7 @@ public class TsFileProcessor {
    * Take the first MemTable from the flushingMemTables and flush it. Called by a flush thread of
    * the flush manager pool
    */
-  public void flushOneMemTable() {
+  public void flushOneMemTable(){
     IMemTable memTableToFlush;
     memTableToFlush = flushingMemTables.getFirst();
 

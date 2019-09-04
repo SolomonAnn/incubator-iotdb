@@ -29,7 +29,9 @@ import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
@@ -59,8 +61,8 @@ public class LogReplayer {
   // unsequence file tolerates duplicated data
   private boolean acceptDuplication;
 
-  private Map<String, Long> tempStartTimeMap = new HashMap<>();
-  private Map<String, Long> tempEndTimeMap = new HashMap<>();
+  private Map<Long, Long> tempStartTimeMap = new HashMap<>();
+  private Map<Long, Long> tempEndTimeMap = new HashMap<>();
 
   public LogReplayer(String logNodePrefix, String insertFilePath,
       ModificationFile modFile,
@@ -82,7 +84,7 @@ public class LogReplayer {
    * the WALs from the logNode and redoes them into a given MemTable and ModificationFile.
    * @throws ProcessorException
    */
-  public void replayLogs() throws ProcessorException {
+  public void replayLogs() throws ProcessorException, PathErrorException {
     WriteLogNode logNode = MultiFileLogNodeManager.getInstance().getNode(
         logNodePrefix + new File(insertFilePath).getName());
 
@@ -115,21 +117,22 @@ public class LogReplayer {
     }
   }
 
-  private void replayInsert(InsertPlan insertPlan) {
+  private void replayInsert(InsertPlan insertPlan) throws PathErrorException {
     if (currentTsFileResource != null) {
       // the last chunk group may contain the same data with the logs, ignore such logs in seq file
-      Long lastEndTime = currentTsFileResource.getEndTimeMap().get(insertPlan.getDeviceId());
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+      Long lastEndTime = currentTsFileResource.getEndTimeMap().get(deviceId);
       if ( lastEndTime != null && lastEndTime >= insertPlan.getTime() &&
           !acceptDuplication) {
         return;
       }
-      Long startTime = tempStartTimeMap.get(insertPlan.getDeviceId());
+      Long startTime = tempStartTimeMap.get(deviceId);
       if (startTime == null || startTime > insertPlan.getTime()) {
-        tempStartTimeMap.put(insertPlan.getDeviceId(), insertPlan.getTime());
+        tempStartTimeMap.put(deviceId, insertPlan.getTime());
       }
-      Long endTime = tempEndTimeMap.get(insertPlan.getDeviceId());
+      Long endTime = tempEndTimeMap.get(deviceId);
       if (endTime == null || endTime < insertPlan.getTime()) {
-        tempEndTimeMap.put(insertPlan.getDeviceId(), insertPlan.getTime());
+        tempEndTimeMap.put(deviceId, insertPlan.getTime());
       }
     }
     String[] measurementList = insertPlan.getMeasurements();

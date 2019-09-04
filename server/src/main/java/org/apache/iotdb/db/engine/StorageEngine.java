@@ -93,7 +93,7 @@ public class StorageEngine implements IService {
         logger.info("Storage Group Processor {} is recovered successfully", storageGroup);
         processorMap.put(storageGroup, processor);
       }
-    } catch (ProcessorException | MetadataErrorException e) {
+    } catch (ProcessorException | MetadataErrorException | PathErrorException e) {
       logger.error("init a storage group processor failed. ", e);
       throw new StorageEngineFailureException(e);
     }
@@ -155,14 +155,14 @@ public class StorageEngine implements IService {
    * @param insertPlan physical plan of insertion
    * @return true if and only if this insertion succeeds
    */
-  public boolean insert(InsertPlan insertPlan) throws StorageEngineException {
+  public boolean insert(InsertPlan insertPlan) throws StorageEngineException, PathErrorException {
 
     StorageGroupProcessor storageGroupProcessor;
     try {
-      storageGroupProcessor = getProcessor(insertPlan.getDeviceId());
+      storageGroupProcessor = getProcessor(insertPlan.getDevice());
     } catch (Exception e) {
       logger.warn("get StorageGroupProcessor of device {} failed, because {}",
-          insertPlan.getDeviceId(),
+          insertPlan.getDevice(),
           e.getMessage(), e);
       throw new StorageEngineException(e);
     }
@@ -175,13 +175,13 @@ public class StorageEngine implements IService {
    * insert a BatchInsertPlan to a storage group
    * @return result of each row
    */
-  public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws StorageEngineException {
+  public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws StorageEngineException, PathErrorException {
     StorageGroupProcessor storageGroupProcessor;
     try {
-      storageGroupProcessor = getProcessor(batchInsertPlan.getDeviceId());
+      storageGroupProcessor = getProcessor(batchInsertPlan.getDevice());
     } catch (Exception e) {
       logger.warn("get StorageGroupProcessor of device {} failed, because {}",
-          batchInsertPlan.getDeviceId(),
+          batchInsertPlan.getDevice(),
           e.getMessage(), e);
       throw new StorageEngineException(e);
     }
@@ -235,7 +235,7 @@ public class StorageEngine implements IService {
    */
   public QueryDataSource query(SingleSeriesExpression seriesExpression, QueryContext context,
       JobFileManager filePathsManager)
-      throws StorageEngineException {
+      throws StorageEngineException, PathErrorException {
     //TODO use context.
     String deviceId = seriesExpression.getSeriesPath().getDevice();
     String measurementId = seriesExpression.getSeriesPath().getMeasurement();

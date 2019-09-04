@@ -55,7 +55,7 @@ public class EngineExecutor {
    * without filter or with global time filter.
    */
   public QueryDataSet executeWithoutValueFilter(QueryContext context)
-      throws StorageEngineException, IOException {
+      throws StorageEngineException, IOException, PathErrorException {
 
     Filter timeFilter = null;
     if (queryExpression.hasQueryFilter()) {
@@ -90,7 +90,8 @@ public class EngineExecutor {
    * @return QueryDataSet object
    * @throws StorageEngineException StorageEngineException
    */
-  public QueryDataSet executeWithValueFilter(QueryContext context) throws StorageEngineException, IOException {
+  public QueryDataSet executeWithValueFilter(QueryContext context)
+      throws StorageEngineException, IOException, PathErrorException {
 
     EngineTimeGenerator timestampGenerator = new EngineTimeGenerator(
         queryExpression.getExpression(), context);

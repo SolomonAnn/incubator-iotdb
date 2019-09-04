@@ -22,6 +22,7 @@ package org.apache.iotdb.db.query.reader;
 import java.io.IOException;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -60,7 +61,7 @@ public abstract class ReaderTestHelper {
 
   abstract protected void insertData() throws IOException;
 
-  protected void insertOneRecord(long time, int num) {
+  protected void insertOneRecord(long time, int num) throws PathErrorException {
     TSRecord record = new TSRecord(time, deviceId);
     record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(num)));
     storageGroupProcessor.insert(new InsertPlan(record));

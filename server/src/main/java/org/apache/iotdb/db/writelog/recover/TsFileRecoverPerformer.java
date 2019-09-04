@@ -31,7 +31,9 @@ import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.tsfile.file.metadata.ChunkGroupMetaData;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
@@ -75,7 +77,7 @@ public class TsFileRecoverPerformer {
    * 1. recover the TsFile by RestorableTsFileIOWriter and truncate the file to remaining corrected
    * data 2. redo the WALs to recover unpersisted data 3. flush and close the file 4. clean WALs
    */
-  public void recover() throws ProcessorException {
+  public void recover() throws ProcessorException, PathErrorException {
 
     IMemTable recoverMemTable = new PrimitiveMemTable();
     this.logReplayer = new LogReplayer(logNodePrefix, insertFilePath, tsFileResource.getModFile(),
@@ -113,10 +115,9 @@ public class TsFileRecoverPerformer {
                   .getChunkGroupMetaDataList();
               for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
                 for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-                  tsFileResource.updateStartTime(chunkGroupMetaData.getDeviceID(),
-                      chunkMetaData.getStartTime());
-                  tsFileResource
-                      .updateEndTime(chunkGroupMetaData.getDeviceID(), chunkMetaData.getEndTime());
+                  Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+                  tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
+                  tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
                 }
               }
             }
@@ -147,7 +148,7 @@ public class TsFileRecoverPerformer {
     }
   }
 
-  private void recoverResourceFromFile() throws IOException {
+  private void recoverResourceFromFile() throws IOException, PathErrorException {
     try {
       tsFileResource.deSerialize();
     } catch (IOException e) {
@@ -158,7 +159,7 @@ public class TsFileRecoverPerformer {
   }
 
 
-  private void recoverResourceFromReader() throws IOException {
+  private void recoverResourceFromReader() throws IOException, PathErrorException {
     try (TsFileSequenceReader reader =
         new TsFileSequenceReader(tsFileResource.getFile().getAbsolutePath(), false)) {
       TsFileMetaData metaData = reader.readFileMetadata();
@@ -169,10 +170,9 @@ public class TsFileRecoverPerformer {
         for (ChunkGroupMetaData chunkGroupMetaData : deviceMetadata
             .getChunkGroupMetaDataList()) {
           for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-            tsFileResource.updateStartTime(chunkGroupMetaData.getDeviceID(),
-                chunkMetaData.getStartTime());
-            tsFileResource
-                .updateEndTime(chunkGroupMetaData.getDeviceID(), chunkMetaData.getEndTime());
+            Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+            tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
+            tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
           }
         }
       }
@@ -181,17 +181,19 @@ public class TsFileRecoverPerformer {
     tsFileResource.serialize();
   }
 
-  private void recoverResourceFromWriter(RestorableTsFileIOWriter restorableTsFileIOWriter) {
+  private void recoverResourceFromWriter(RestorableTsFileIOWriter restorableTsFileIOWriter) throws PathErrorException {
     for (ChunkGroupMetaData chunkGroupMetaData : restorableTsFileIOWriter
         .getChunkGroupMetaDatas()) {
       for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-        tsFileResource.updateStartTime(chunkGroupMetaData.getDeviceID(), chunkMetaData.getStartTime());
-        tsFileResource.updateEndTime(chunkGroupMetaData.getDeviceID(), chunkMetaData.getEndTime());
+        Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+        tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
+        tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
       }
     }
   }
 
-  private void redoLogs(RestorableTsFileIOWriter restorableTsFileIOWriter) throws ProcessorException {
+  private void redoLogs(RestorableTsFileIOWriter restorableTsFileIOWriter)
+      throws ProcessorException, PathErrorException {
     IMemTable recoverMemTable = new PrimitiveMemTable();
     this.logReplayer = new LogReplayer(logNodePrefix, insertFilePath, tsFileResource.getModFile(),
         versionController,

@@ -26,11 +26,14 @@ import java.util.Map.Entry;
 import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
+import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.MemUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.common.Path;
 
 public abstract class AbstractMemTable implements IMemTable {
 
@@ -38,7 +41,7 @@ public abstract class AbstractMemTable implements IMemTable {
 
   private List<Modification> modifications = new ArrayList<>();
 
-  private final Map<String, Map<String, IWritableMemChunk>> memTableMap;
+  private final Map<Long, Map<Long, IWritableMemChunk>> memTableMap;
 
   private long memSize = 0;
 
@@ -46,12 +49,12 @@ public abstract class AbstractMemTable implements IMemTable {
     this.memTableMap = new HashMap<>();
   }
 
-  public AbstractMemTable(Map<String, Map<String, IWritableMemChunk>> memTableMap) {
+  public AbstractMemTable(Map<Long, Map<Long, IWritableMemChunk>> memTableMap) {
     this.memTableMap = memTableMap;
   }
 
   @Override
-  public Map<String, Map<String, IWritableMemChunk>> getMemTableMap() {
+  public Map<Long, Map<Long, IWritableMemChunk>> getMemTableMap() {
     return memTableMap;
   }
 
@@ -64,25 +67,27 @@ public abstract class AbstractMemTable implements IMemTable {
     return memTableMap.containsKey(deviceId) && memTableMap.get(deviceId).containsKey(measurement);
   }
 
-  private IWritableMemChunk createIfNotExistAndGet(String deviceId, String measurement,
-      TSDataType dataType) {
+  private IWritableMemChunk createIfNotExistAndGet(String device, String measurement,
+      TSDataType dataType) throws PathErrorException {
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(device);
+    Long measurementId = MManager.getInstance().getMeasurementIdByPath(measurement);
     if (!memTableMap.containsKey(deviceId)) {
       memTableMap.put(deviceId, new HashMap<>());
     }
-    Map<String, IWritableMemChunk> memSeries = memTableMap.get(deviceId);
-    if (!memSeries.containsKey(measurement)) {
-      memSeries.put(measurement, genMemSeries(dataType));
+    Map<Long, IWritableMemChunk> memSeries = memTableMap.get(deviceId);
+    if (!memSeries.containsKey(measurementId)) {
+      memSeries.put(measurementId, genMemSeries(dataType));
     }
-    return memSeries.get(measurement);
+    return memSeries.get(measurementId);
   }
 
   protected abstract IWritableMemChunk genMemSeries(TSDataType dataType);
 
 
   @Override
-  public void insert(InsertPlan insertPlan) {
+  public void insert(InsertPlan insertPlan) throws PathErrorException {
     for (int i = 0; i < insertPlan.getValues().length; i++) {
-      write(insertPlan.getDeviceId(), insertPlan.getMeasurements()[i],
+      write(insertPlan.getDevice(), insertPlan.getMeasurements()[i],
           insertPlan.getDataTypes()[i], insertPlan.getTime(), insertPlan.getValues()[i]);
     }
     long recordSizeInByte = MemUtils.getRecordSize(insertPlan);
@@ -90,7 +95,7 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
   @Override
-  public void insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes) {
+  public void insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException {
     write(batchInsertPlan, indexes);
     long recordSizeInByte = MemUtils.getRecordSize(batchInsertPlan);
     memSize += recordSizeInByte;
@@ -98,16 +103,16 @@ public abstract class AbstractMemTable implements IMemTable {
 
 
   @Override
-  public void write(String deviceId, String measurement, TSDataType dataType, long insertTime,
-      String insertValue) {
-    IWritableMemChunk memSeries = createIfNotExistAndGet(deviceId, measurement, dataType);
+  public void write(String device, String measurement, TSDataType dataType, long insertTime,
+      String insertValue) throws PathErrorException {
+    IWritableMemChunk memSeries = createIfNotExistAndGet(device, measurement, dataType);
     memSeries.write(insertTime, insertValue);
   }
 
   @Override
-  public void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) {
+  public void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException {
     for (int i = 0; i < batchInsertPlan.getMeasurements().length; i++) {
-      IWritableMemChunk memSeries = createIfNotExistAndGet(batchInsertPlan.getDeviceId(),
+      IWritableMemChunk memSeries = createIfNotExistAndGet(batchInsertPlan.getDevice(),
           batchInsertPlan.getMeasurements()[i], batchInsertPlan.getDataTypes()[i]);
       memSeries.write(batchInsertPlan.getTimes(), batchInsertPlan.getColumns()[i], batchInsertPlan.getDataTypes()[i], indexes);
     }
@@ -117,7 +122,7 @@ public abstract class AbstractMemTable implements IMemTable {
   @Override
   public long size() {
     long sum = 0;
-    for (Map<String, IWritableMemChunk> seriesMap : memTableMap.values()) {
+    for (Map<Long, IWritableMemChunk> seriesMap : memTableMap.values()) {
       for (IWritableMemChunk writableMemChunk : seriesMap.values()) {
         sum += writableMemChunk.count();
       }
@@ -175,7 +180,7 @@ public abstract class AbstractMemTable implements IMemTable {
 
   @Override
   public void delete(String deviceId, String measurementId, long timestamp) {
-    Map<String, IWritableMemChunk> deviceMap = memTableMap.get(deviceId);
+    Map<Long, IWritableMemChunk> deviceMap = memTableMap.get(deviceId);
     if (deviceMap != null) {
       IWritableMemChunk chunk = deviceMap.get(measurementId);
       if (chunk == null) {
@@ -200,8 +205,8 @@ public abstract class AbstractMemTable implements IMemTable {
 
   @Override
   public void release() {
-    for (Entry<String, Map<String, IWritableMemChunk>> entry: memTableMap.entrySet()) {
-      for (Entry<String, IWritableMemChunk> subEntry: entry.getValue().entrySet()) {
+    for (Entry<Long, Map<Long, IWritableMemChunk>> entry: memTableMap.entrySet()) {
+      for (Entry<Long, IWritableMemChunk> subEntry: entry.getValue().entrySet()) {
         TVListAllocator.getInstance().release(subEntry.getValue().getTVList());
       }
     }

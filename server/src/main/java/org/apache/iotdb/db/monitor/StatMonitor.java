@@ -31,6 +31,7 @@ import org.apache.iotdb.db.concurrent.ThreadName;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.MetadataErrorException;
 import org.apache.iotdb.db.exception.StartupException;
@@ -378,7 +379,7 @@ public class StatMonitor implements IService {
       }
     }
 
-    public void insert(Map<String, TSRecord> tsRecordHashMap) {
+    public void insert(Map<String, TSRecord> tsRecordHashMap) throws PathErrorException {
       StorageEngine fManager = StorageEngine.getInstance();
       int pointNum;
       for (Map.Entry<String, TSRecord> entry : tsRecordHashMap.entrySet()) {

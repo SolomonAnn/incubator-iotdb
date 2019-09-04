@@ -29,6 +29,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -162,7 +163,7 @@ public class IoTDBSequenceDataQueryIT {
   }
 
   @Test
-  public void readWithoutFilterTest() throws IOException, StorageEngineException {
+  public void readWithoutFilterTest() throws IOException, StorageEngineException, PathErrorException {
 
     EngineQueryRouter engineExecutor = new EngineQueryRouter();
     QueryExpression queryExpression = QueryExpression.create();
@@ -191,7 +192,7 @@ public class IoTDBSequenceDataQueryIT {
   }
 
   @Test
-  public void readWithTimeFilterTest() throws IOException, StorageEngineException {
+  public void readWithTimeFilterTest() throws IOException, StorageEngineException, PathErrorException {
     EngineQueryRouter engineExecutor = new EngineQueryRouter();
     QueryExpression queryExpression = QueryExpression.create();
     queryExpression.addSelectedPath(new Path(Constant.d0s0));
@@ -219,7 +220,7 @@ public class IoTDBSequenceDataQueryIT {
   }
 
   @Test
-  public void readWithValueFilterTest() throws IOException, StorageEngineException {
+  public void readWithValueFilterTest() throws IOException, StorageEngineException, PathErrorException {
     // select * from root where root.vehicle.d0.s0 >=14
     EngineQueryRouter engineExecutor = new EngineQueryRouter();
     QueryExpression queryExpression = QueryExpression.create();

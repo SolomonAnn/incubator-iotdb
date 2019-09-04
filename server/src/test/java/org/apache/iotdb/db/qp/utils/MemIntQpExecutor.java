@@ -184,7 +184,7 @@ public class MemIntQpExecutor extends AbstractQueryProcessExecutor {
   @Override
   public boolean insert(InsertPlan insertPlan) {
     for (int i = 0; i < insertPlan.getMeasurements().length; i++) {
-      String strPath = insertPlan.getDeviceId() + IoTDBConstant.PATH_SEPARATOR + insertPlan.getMeasurements()[i];
+      String strPath = insertPlan.getDevice() + IoTDBConstant.PATH_SEPARATOR + insertPlan.getMeasurements()[i];
       if (!demoMemDataBase.containsKey(strPath)) {
         demoMemDataBase.put(strPath, new TestSeries());
       }

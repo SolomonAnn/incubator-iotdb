@@ -36,17 +36,20 @@ public class JDBCExample {
       statement.execute("CREATE TIMESERIES root.sg1.d1.s2 WITH DATATYPE=INT64, ENCODING=RLE");
       statement.execute("CREATE TIMESERIES root.sg1.d1.s3 WITH DATATYPE=INT64, ENCODING=RLE");
 
-      for (int i = 0; i <= 100; i++) {
+      long startTime = System.currentTimeMillis();
+      for (int i = 0; i <= 1_000_000; i++) {
         statement.addBatch("insert into root.sg1.d1(timestamp, s1, s2, s3) values("+ i + "," + 1 + "," + 1 + "," + 1 + ")");
         statement.executeBatch();
         statement.clearBatch();
       }
-      ResultSet resultSet = statement.executeQuery("select * from root where time <= 10");
-      outputResult(resultSet);
-      resultSet = statement.executeQuery("select count(*) from root");
-      outputResult(resultSet);
-      resultSet = statement.executeQuery("select count(*) from root where time >= 1 and time <= 100 group by (20ms, 0, [0, 100])");
-      outputResult(resultSet);
+      long endTime = System.currentTimeMillis();
+      System.out.println("Time Consuming: " + (endTime - startTime) + " ms");
+//      ResultSet resultSet = statement.executeQuery("select * from root where time <= 10");
+//      outputResult(resultSet);
+//      resultSet = statement.executeQuery("select count(*) from root");
+//      outputResult(resultSet);
+//      resultSet = statement.executeQuery("select count(*) from root where time >= 1 and time <= 100 group by (20ms, 0, [0, 100])");
+//      outputResult(resultSet);
     }
   }
 

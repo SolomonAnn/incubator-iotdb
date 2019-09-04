@@ -105,7 +105,7 @@ public class SyncServerManager implements IService {
     private TThreadPoolServer.Args poolArgs;
 
     public SyncServiceThread() {
-      processor = new SyncService.Processor<>(new SyncServiceImpl());
+//      processor = new SyncService.Processor<>(new SyncServiceImpl());
     }
 
     @Override
@@ -119,7 +119,7 @@ public class SyncServerManager implements IService {
         else {
           protocolFactory = new TBinaryProtocol.Factory();
         }
-        processor = new SyncService.Processor<>(new SyncServiceImpl());
+//        processor = new SyncService.Processor<>(new SyncServiceImpl());
         poolArgs = new TThreadPoolServer.Args(serverTransport);
         poolArgs.executorService = IoTDBThreadPoolFactory.createThriftRpcClientThreadPool(poolArgs,
             ThreadName.SYNC_CLIENT.getName());

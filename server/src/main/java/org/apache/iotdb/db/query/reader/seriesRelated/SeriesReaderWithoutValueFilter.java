@@ -20,6 +20,7 @@ package org.apache.iotdb.db.query.reader.seriesRelated;
 
 import java.io.IOException;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -56,7 +57,7 @@ public class SeriesReaderWithoutValueFilter implements IPointReader {
   }
 
   public SeriesReaderWithoutValueFilter(Path seriesPath, Filter timeFilter, QueryContext context)
-      throws StorageEngineException, IOException {
+      throws StorageEngineException, IOException, PathErrorException {
     this(seriesPath, timeFilter, context, true);
   }
 
@@ -70,7 +71,7 @@ public class SeriesReaderWithoutValueFilter implements IPointReader {
    * to.
    */
   protected SeriesReaderWithoutValueFilter(Path seriesPath, Filter filter, QueryContext context,
-      boolean pushdownUnseq) throws StorageEngineException, IOException {
+      boolean pushdownUnseq) throws StorageEngineException, IOException, PathErrorException {
     QueryDataSource queryDataSource = QueryResourceManager.getInstance()
         .getQueryDataSource(seriesPath, context);
 

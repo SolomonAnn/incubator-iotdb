@@ -136,14 +136,14 @@ public class TsFileResource {
       int size = ReadWriteIOUtils.readInt(inputStream);
       Map<Long, Long> startTimes = new HashMap<>();
       for (int i = 0; i < size; i++) {
-        String path = ReadWriteIOUtils.readString(inputStream);
+        Long path = ReadWriteIOUtils.readLong(inputStream);
         long time = ReadWriteIOUtils.readLong(inputStream);
         startTimes.put(path, time);
       }
       size = ReadWriteIOUtils.readInt(inputStream);
       Map<Long, Long> endTimes = new HashMap<>();
       for (int i = 0; i < size; i++) {
-        String path = ReadWriteIOUtils.readString(inputStream);
+        Long path = ReadWriteIOUtils.readLong(inputStream);
         long time = ReadWriteIOUtils.readLong(inputStream);
         endTimes.put(path, time);
       }

@@ -29,6 +29,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.timegenerator.EngineTimeGenerator;
 import org.apache.iotdb.db.service.IoTDB;
@@ -181,7 +182,7 @@ public class IoTDBEngineTimeGeneratorIT {
    * value >= 14 && time > 500
    */
   @Test
-  public void testOneSeriesWithValueAndTimeFilter() throws IOException, StorageEngineException {
+  public void testOneSeriesWithValueAndTimeFilter() throws IOException, StorageEngineException, PathErrorException {
     //System.out.println("Test >>> root.vehicle.d0.s0 >= 14 && time > 500");
 
     Path pd0s0 = new Path(Constant.d0s0);
@@ -207,7 +208,7 @@ public class IoTDBEngineTimeGeneratorIT {
    * root.vehicle.d1.s0 >= 5, and d1.s0 has no data
    */
   @Test
-  public void testEmptySeriesWithValueFilter() throws IOException, StorageEngineException {
+  public void testEmptySeriesWithValueFilter() throws IOException, StorageEngineException, PathErrorException {
     //System.out.println("Test >>> root.vehicle.d1.s0 >= 5");
 
     Path pd1s0 = new Path(Constant.d1s0);
@@ -229,7 +230,7 @@ public class IoTDBEngineTimeGeneratorIT {
    */
   @Test
   public void testMultiSeriesWithValueFilterAndTimeFilter()
-      throws IOException, StorageEngineException {
+      throws IOException, StorageEngineException, PathErrorException {
     System.out
         .println("Test >>> root.vehicle.d0.s0 >= 5 && root.vehicle.d0.s2 >= 11.5 || time > 900");
 

@@ -940,7 +940,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
 
     // the old parameter will be used if new parameter is not set
     if (req.isSetDeviceId()) {
-      plan.setDeviceId(req.getDeviceId());
+      plan.setDevice(req.getDeviceId());
     }
     if (req.isSetTimestamp()) {
       plan.setTime(req.getTimestamp());

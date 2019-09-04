@@ -20,6 +20,8 @@
 package org.apache.iotdb.db.query.fill;
 
 import java.io.IOException;
+
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.reader.IPointReader;
@@ -48,10 +50,10 @@ public abstract class IFill {
   public abstract IFill copy(Path path);
 
   public abstract void constructReaders(Path path, QueryContext context)
-      throws IOException, StorageEngineException;
+      throws IOException, StorageEngineException, PathErrorException;
 
   void constructReaders(Path path, QueryContext context, long beforeRange)
-      throws IOException, StorageEngineException {
+      throws IOException, StorageEngineException, PathErrorException {
     Filter timeFilter = constructFilter(beforeRange);
     allDataReader = new SeriesReaderWithoutValueFilter(path, timeFilter, context);
   }

@@ -204,7 +204,7 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
   public boolean insert(InsertPlan insertPlan) throws ProcessorException {
     try {
       String[] measurementList = insertPlan.getMeasurements();
-      String deviceId = insertPlan.getDeviceId();
+      String deviceId = insertPlan.getDevice();
       MNode node = mManager.getNodeByDeviceIdFromCache(deviceId);
       String[] values = insertPlan.getValues();
       TSDataType[] dataTypes = new TSDataType[measurementList.length];
@@ -237,7 +237,7 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
   public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws ProcessorException {
     try {
       String[] measurementList = batchInsertPlan.getMeasurements();
-      String deviceId = batchInsertPlan.getDeviceId();
+      String deviceId = batchInsertPlan.getDevice();
       MNode node = mManager.getNodeByDeviceIdFromCache(deviceId);
 
       for (String s : measurementList) {

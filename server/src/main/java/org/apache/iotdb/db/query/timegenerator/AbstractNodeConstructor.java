@@ -22,6 +22,8 @@ import static org.apache.iotdb.tsfile.read.expression.ExpressionType.AND;
 import static org.apache.iotdb.tsfile.read.expression.ExpressionType.OR;
 
 import java.io.IOException;
+
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
@@ -45,7 +47,7 @@ public abstract class AbstractNodeConstructor {
    * @throws StorageEngineException StorageEngineException
    */
   public abstract Node construct(IExpression expression, QueryContext context)
-      throws StorageEngineException;
+      throws StorageEngineException, PathErrorException;
 
   /**
    * Construct not series type node.
@@ -55,7 +57,7 @@ public abstract class AbstractNodeConstructor {
    * @throws StorageEngineException StorageEngineException
    */
   protected Node constructNotSeriesNode(IExpression expression, QueryContext context)
-      throws StorageEngineException {
+      throws StorageEngineException, PathErrorException {
     Node leftChild;
     Node rightChild;
     if (expression.getType() == OR) {
