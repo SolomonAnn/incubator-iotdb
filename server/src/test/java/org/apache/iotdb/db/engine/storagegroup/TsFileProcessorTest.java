@@ -22,7 +22,6 @@ import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
@@ -43,6 +42,7 @@ import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.ChunkGroupMetaData;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.db.engine.fileSystem.FileFactory;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.datapoint.DataPoint;
@@ -77,7 +77,7 @@ public class TsFileProcessorTest {
   @Test
   public void testWriteAndFlush()
       throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
-    processor = new TsFileProcessor(storageGroup, new File(filePath),
+    processor = new TsFileProcessor(storageGroup, FileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
@@ -124,7 +124,7 @@ public class TsFileProcessorTest {
   @Test
   public void testWriteAndRestoreMetadata()
       throws IOException, PathErrorException {
-    processor = new TsFileProcessor(storageGroup, new File(filePath),
+    processor = new TsFileProcessor(storageGroup, FileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
@@ -169,7 +169,7 @@ public class TsFileProcessorTest {
     RestorableTsFileIOWriter tsFileIOWriter = processor.getWriter();
     List<ChunkGroupMetaData> chunkGroupMetaDataList = tsFileIOWriter.getChunkGroupMetaDatas();
     RestorableTsFileIOWriter restorableTsFileIOWriter = new RestorableTsFileIOWriter(
-        new File(filePath));
+        FileFactory.INSTANCE.getFile(filePath));
     List<ChunkGroupMetaData> restoredChunkGroupMetaDataList = restorableTsFileIOWriter
         .getChunkGroupMetaDatas();
     assertEquals(chunkGroupMetaDataList.size(), restoredChunkGroupMetaDataList.size());
@@ -191,7 +191,7 @@ public class TsFileProcessorTest {
   @Test
   public void testMultiFlush()
       throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
-    processor = new TsFileProcessor(storageGroup, new File(filePath),
+    processor = new TsFileProcessor(storageGroup, FileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
@@ -227,7 +227,7 @@ public class TsFileProcessorTest {
   @Test
   public void testWriteAndClose()
       throws WriteProcessException, IOException, PathErrorException {
-    processor = new TsFileProcessor(storageGroup, new File(filePath),
+    processor = new TsFileProcessor(storageGroup, FileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE,
         unsealedTsFileProcessor -> {
           TsFileResource resource = unsealedTsFileProcessor.getTsFileResource();

@@ -19,13 +19,16 @@
 
 package org.apache.iotdb.tsfile.file.footer;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
+import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.MetaMarker;
 import org.apache.iotdb.tsfile.read.reader.TsFileInput;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 
 public class ChunkGroupFooter {
 
@@ -47,12 +50,12 @@ public class ChunkGroupFooter {
    * @param dataSize data size
    * @param numberOfChunks number of chunks
    */
-  public ChunkGroupFooter(String devicePath, long dataSize, int numberOfChunks) {
+  public ChunkGroupFooter(String devicePath, long dataSize, int numberOfChunks) throws UnsupportedEncodingException {
     this.devicePath = devicePath;
     this.dataSize = dataSize;
     this.numberOfChunks = numberOfChunks;
     this.serializedSize =
-        Byte.BYTES + Integer.BYTES + devicePath.length() + Long.BYTES + Integer.BYTES;
+        Byte.BYTES + Integer.BYTES + devicePath.getBytes(TSFileConfig.STRING_ENCODING).length + Long.BYTES + Integer.BYTES;
   }
 
   public static int getSerializedSize(String devicePath) {
