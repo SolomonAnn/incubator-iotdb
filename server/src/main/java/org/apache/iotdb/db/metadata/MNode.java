@@ -57,16 +57,15 @@ public class MNode implements Serializable {
    */
   public MNode(String name, MNode parent, boolean isLeaf) {
     this.setName(name);
+    this.parent = parent;
     this.isLeaf = isLeaf;
     this.isStorageLevel = false;
-    this.parent = parent;
     if (!isLeaf) {
       children = new LinkedHashMap<>();
     }
   }
 
   /**
-   *
    * Constructor of leaf MNode.
    */
   public MNode(String name, TSDataType dataType, TSEncoding encoding,

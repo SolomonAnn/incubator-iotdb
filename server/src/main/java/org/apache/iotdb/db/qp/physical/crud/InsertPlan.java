@@ -32,8 +32,8 @@ import org.apache.iotdb.tsfile.write.record.TSRecord;
 
 public class InsertPlan extends PhysicalPlan {
 
-  private String device;
-  private String[] measurements;
+  private String devicePath;
+  private String[] measurementPaths;
   private TSDataType[] dataTypes;
   private String[] values;
   private long time;
@@ -42,33 +42,33 @@ public class InsertPlan extends PhysicalPlan {
     super(false, OperatorType.INSERT);
   }
 
-  public InsertPlan(String device, long insertTime, String measurement, String insertValue) {
+  public InsertPlan(String devicePath, long insertTime, String measurementPath, String insertValue) {
     super(false, OperatorType.INSERT);
     this.time = insertTime;
-    this.device = device;
-    this.measurements = new String[] {measurement};
+    this.devicePath = devicePath;
+    this.measurementPaths = new String[] {measurementPath};
     this.values = new String[] {insertValue};
   }
 
   public InsertPlan(TSRecord tsRecord) {
     super(false, OperatorType.INSERT);
-    this.device = tsRecord.deviceId;
+    this.devicePath = tsRecord.devicePath;
     this.time = tsRecord.time;
-    this.measurements = new String[tsRecord.dataPointList.size()];
+    this.measurementPaths = new String[tsRecord.dataPointList.size()];
     this.dataTypes = new TSDataType[tsRecord.dataPointList.size()];
     this.values = new String[tsRecord.dataPointList.size()];
     for (int i = 0; i < tsRecord.dataPointList.size(); i++) {
-      measurements[i] = tsRecord.dataPointList.get(i).getMeasurementId();
+      measurementPaths[i] = tsRecord.dataPointList.get(i).getMeasurementPath();
       dataTypes[i] = tsRecord.dataPointList.get(i).getType();
       values[i] = tsRecord.dataPointList.get(i).getValue().toString();
     }
   }
 
-  public InsertPlan(String device, long insertTime, String[] measurementList, String[] insertValues) {
+  public InsertPlan(String devicePath, long insertTime, String[] measurementList, String[] insertValues) {
     super(false, Operator.OperatorType.INSERT);
     this.time = insertTime;
-    this.device = device;
-    this.measurements = measurementList;
+    this.devicePath = devicePath;
+    this.measurementPaths = measurementList;
     this.values = insertValues;
   }
 
@@ -92,27 +92,26 @@ public class InsertPlan extends PhysicalPlan {
   public List<Path> getPaths() {
     List<Path> ret = new ArrayList<>();
 
-    for (String m : measurements) {
-      ret.add(new Path(device, m));
+    for (String m : measurementPaths) {
+      ret.add(new Path(devicePath, m));
     }
     return ret;
   }
 
-  public String getDevice() {
-    return this.device;
+  public String getDevicePath() {
+    return this.devicePath;
   }
 
-
-  public void setDevice(String device) {
-    this.device = device;
+  public void setDevicePath(String devicePath) {
+    this.devicePath = devicePath;
   }
 
-  public String[] getMeasurements() {
-    return this.measurements;
+  public String[] getMeasurementPaths() {
+    return this.measurementPaths;
   }
 
-  public void setMeasurements(String[] measurements) {
-    this.measurements = measurements;
+  public void setMeasurementPaths(String[] measurementPaths) {
+    this.measurementPaths = measurementPaths;
   }
 
   public String[] getValues() {
@@ -132,14 +131,14 @@ public class InsertPlan extends PhysicalPlan {
       return false;
     }
     InsertPlan that = (InsertPlan) o;
-    return time == that.time && Objects.equals(device, that.device)
-        && Arrays.equals(measurements, that.measurements)
+    return time == that.time && Objects.equals(devicePath, that.devicePath)
+        && Arrays.equals(measurementPaths, that.measurementPaths)
         && Arrays.equals(values, that.values);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(device, time);
+    return Objects.hash(devicePath, time);
   }
 
   @Override
@@ -148,10 +147,10 @@ public class InsertPlan extends PhysicalPlan {
     buffer.put((byte) type);
     buffer.putLong(time);
 
-    putString(buffer, device);
+    putString(buffer, devicePath);
 
-    buffer.putInt(measurements.length);
-    for (String m : measurements) {
+    buffer.putInt(measurementPaths.length);
+    for (String m : measurementPaths) {
       putString(buffer, m);
     }
 
@@ -164,12 +163,12 @@ public class InsertPlan extends PhysicalPlan {
   @Override
   public void deserializeFrom(ByteBuffer buffer) {
     this.time = buffer.getLong();
-    this.device = readString(buffer);
+    this.devicePath = readString(buffer);
 
-    int measurementSize = buffer.getInt();
-    this.measurements = new String[measurementSize];
-    for (int i = 0; i < measurementSize; i++) {
-      measurements[i] = readString(buffer);
+    int measurementPathsSize = buffer.getInt();
+    this.measurementPaths = new String[measurementPathsSize];
+    for (int i = 0; i < measurementPathsSize; i++) {
+      measurementPaths[i] = readString(buffer);
     }
 
     int valueSize = buffer.getInt();
@@ -181,6 +180,6 @@ public class InsertPlan extends PhysicalPlan {
 
   @Override
   public String toString() {
-    return "deviceId: " + device + ", time: " + time;
+    return "devicePath: " + devicePath + ", time: " + time;
   }
 }

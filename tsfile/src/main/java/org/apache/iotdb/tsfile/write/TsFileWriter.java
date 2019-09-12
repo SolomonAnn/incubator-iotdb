@@ -167,17 +167,17 @@ public class TsFileWriter implements AutoCloseable{
    */
   private boolean checkIsTimeSeriesExist(TSRecord record) throws WriteProcessException {
     IChunkGroupWriter groupWriter;
-    if (!groupWriters.containsKey(record.deviceId)) {
-      groupWriter = new ChunkGroupWriterImpl(record.deviceId);
-      groupWriters.put(record.deviceId, groupWriter);
+    if (!groupWriters.containsKey(record.devicePath)) {
+      groupWriter = new ChunkGroupWriterImpl(record.devicePath);
+      groupWriters.put(record.devicePath, groupWriter);
     } else {
-      groupWriter = groupWriters.get(record.deviceId);
+      groupWriter = groupWriters.get(record.devicePath);
     }
 
     // add all SeriesWriter of measurements in this TSRecord to this ChunkGroupWriter
     Map<String, MeasurementSchema> schemaDescriptorMap = schema.getMeasurementSchemaMap();
     for (DataPoint dp : record.dataPointList) {
-      String measurementId = dp.getMeasurementId();
+      String measurementId = dp.getMeasurementPath();
       if (schemaDescriptorMap.containsKey(measurementId)) {
         groupWriter.tryToAddSeriesWriter(schemaDescriptorMap.get(measurementId), pageSize);
       } else {
@@ -196,11 +196,11 @@ public class TsFileWriter implements AutoCloseable{
    */
   private void checkIsTimeSeriesExist(RowBatch rowBatch) throws WriteProcessException {
     IChunkGroupWriter groupWriter;
-    if (!groupWriters.containsKey(rowBatch.deviceId)) {
-      groupWriter = new ChunkGroupWriterImpl(rowBatch.deviceId);
-      groupWriters.put(rowBatch.deviceId, groupWriter);
+    if (!groupWriters.containsKey(rowBatch.devicePath)) {
+      groupWriter = new ChunkGroupWriterImpl(rowBatch.devicePath);
+      groupWriters.put(rowBatch.devicePath, groupWriter);
     } else {
-      groupWriter = groupWriters.get(rowBatch.deviceId);
+      groupWriter = groupWriters.get(rowBatch.devicePath);
     }
 
     // add all SeriesWriter of measurements in this RowBatch to this ChunkGroupWriter
@@ -227,7 +227,7 @@ public class TsFileWriter implements AutoCloseable{
     // make sure the ChunkGroupWriter for this TSRecord exist
     checkIsTimeSeriesExist(record);
     // get corresponding ChunkGroupWriter and write this TSRecord
-    groupWriters.get(record.deviceId).write(record.time, record.dataPointList);
+    groupWriters.get(record.devicePath).write(record.time, record.dataPointList);
     ++recordCount;
     return checkMemorySizeAndMayFlushGroup();
   }
@@ -243,7 +243,7 @@ public class TsFileWriter implements AutoCloseable{
     // make sure the ChunkGroupWriter for this RowBatch exist
     checkIsTimeSeriesExist(rowBatch);
     // get corresponding ChunkGroupWriter and write this RowBatch
-    groupWriters.get(rowBatch.deviceId).write(rowBatch);
+    groupWriters.get(rowBatch.devicePath).write(rowBatch);
     recordCount += rowBatch.batchSize;
     return checkMemorySizeAndMayFlushGroup();
   }
@@ -297,9 +297,9 @@ public class TsFileWriter implements AutoCloseable{
     if (recordCount > 0) {
       for (Map.Entry<String, IChunkGroupWriter> entry: groupWriters.entrySet()) {
         long pos = fileWriter.getPos();
-        String deviceId = entry.getKey();
+        String devicePath = entry.getKey();
         IChunkGroupWriter groupWriter = entry.getValue();
-        fileWriter.startChunkGroup(deviceId);
+        fileWriter.startChunkGroup(devicePath);
         ChunkGroupFooter chunkGroupFooter = groupWriter.flushToFileWriter(fileWriter);
         if (fileWriter.getPos() - pos != chunkGroupFooter.getDataSize()) {
           throw new IOException(String.format(

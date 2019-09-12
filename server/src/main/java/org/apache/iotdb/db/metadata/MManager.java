@@ -290,7 +290,7 @@ public class MManager {
     // the two map is stored in the storage group node
     Map<String, MeasurementSchema> schemaMap = getStorageGroupSchemaMap(fileNodePath);
     Map<String, Integer> numSchemaMap = getStorageGroupNumSchemaMap(fileNodePath);
-    String lastNode = path.getMeasurement();
+    String lastNode = path.getMeasurementPath();
     boolean isNewMeasurement = true;
     // Thread safety: just one thread can access/modify the schemaMap
     synchronized (schemaMap) {
@@ -462,7 +462,7 @@ public class MManager {
     synchronized (schemaMap) {
       // TODO: don't delete the storage group seriesPath recursively
       Path path = new Path(pathStr);
-      String measurementId = path.getMeasurement();
+      String measurementId = path.getMeasurementPath();
       if (numSchemaMap.get(measurementId) == 1) {
         numSchemaMap.remove(measurementId);
         schemaMap.remove(measurementId);
@@ -1197,21 +1197,41 @@ public class MManager {
     }
   }
 
-  public Long getDeviceIdByPath(String path) throws PathErrorException {
-    return mgraph.getDeviceIdByPath(path);
+  public Long getDeviceIdByPath(String devicePath) throws PathErrorException {
+    lock.readLock().lock();
+    try {
+      return mgraph.getDeviceIdByPath(devicePath);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
-  public Long getMeasurementIdByPath(String path) throws PathErrorException {
-    return mgraph.getMeasurementIdByPath(path);
+  public Long getMeasurementIdByPath(String devicePath, String measurementPath) throws PathErrorException {
+    lock.readLock().lock();
+    try {
+      return mgraph.getMeasurementIdByPath(devicePath, measurementPath);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
-  public String getDevicePathById(Long id) throws PathErrorException {
-    return mgraph.getDevicePathById(id);
+  public String getDevicePathById(Long deviceId) throws PathErrorException {
+    lock.readLock().lock();
+    try {
+      return mgraph.getDevicePathById(deviceId);
+    } finally {
+      lock.readLock().unlock();
+    }
   }
 
-  public String getMeasurementPathById(Long id) throws PathErrorException {
-    return mgraph.getMeasurementPathById(id);
-  }
+//  public String getMeasurementPathById(Long measurementId) throws PathErrorException {
+//    lock.readLock().lock();
+//    try {
+//      return mgraph.getMeasurementPathById(measurementId);
+//    } finally {
+//      lock.readLock().unlock();
+//    }
+//  }
 
   /**
    * Only for test

@@ -247,21 +247,21 @@ public class MergeUtils {
     if (paths.isEmpty()) {
       return Collections.emptyList();
     }
-    paths.sort(Comparator.comparing(Path::getDevice));
+    paths.sort(Comparator.comparing(Path::getDevicePath));
 
     String currDevice = null;
     List<Path> currList = null;
     List<List<Path>> ret = new ArrayList<>();
     for (Path path : paths) {
       if (currDevice == null) {
-        currDevice = path.getDevice();
+        currDevice = path.getDevicePath();
         currList = new ArrayList<>();
         currList.add(path);
-      } else if (path.getDevice().equals(currDevice)) {
+      } else if (path.getDevicePath().equals(currDevice)) {
         currList.add(path);
       } else {
         ret.add(currList);
-        currDevice = path.getDevice();
+        currDevice = path.getDevicePath();
         currList = new ArrayList<>();
         currList.add(path);
       }

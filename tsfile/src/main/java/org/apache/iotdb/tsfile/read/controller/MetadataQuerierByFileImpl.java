@@ -92,10 +92,10 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
     // group measurements by device
     TreeMap<String, Set<String>> deviceMeasurementsMap = new TreeMap<>();
     for (Path path : paths) {
-      if (!deviceMeasurementsMap.containsKey(path.getDevice())) {
-        deviceMeasurementsMap.put(path.getDevice(), new HashSet<>());
+      if (!deviceMeasurementsMap.containsKey(path.getDevicePath())) {
+        deviceMeasurementsMap.put(path.getDevicePath(), new HashSet<>());
       }
-      deviceMeasurementsMap.get(path.getDevice()).add(path.getMeasurement());
+      deviceMeasurementsMap.get(path.getDevicePath()).add(path.getMeasurementPath());
     }
 
     Map<Path, List<ChunkMetaData>> tempChunkMetaDatas = new HashMap<>();
@@ -177,7 +177,7 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
 
   @Override
   public List<TimeRange> convertSpace2TimePartition(List<Path> paths, long spacePartitionStartPos,
-      long spacePartitionEndPos) throws IOException {
+                                                    long spacePartitionEndPos) throws IOException {
     if (spacePartitionStartPos > spacePartitionEndPos) {
       throw new IllegalArgumentException(
           "'spacePartitionStartPos' should not be larger than 'spacePartitionEndPos'.");
@@ -190,10 +190,10 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
     // group measurements by device
     TreeMap<String, Set<String>> deviceMeasurementsMap = new TreeMap<>();
     for (Path path : paths) {
-      if (!deviceMeasurementsMap.containsKey(path.getDevice())) {
-        deviceMeasurementsMap.put(path.getDevice(), new HashSet<>());
+      if (!deviceMeasurementsMap.containsKey(path.getDevicePath())) {
+        deviceMeasurementsMap.put(path.getDevicePath(), new HashSet<>());
       }
-      deviceMeasurementsMap.get(path.getDevice()).add(path.getMeasurement());
+      deviceMeasurementsMap.get(path.getDevicePath()).add(path.getMeasurementPath());
     }
     for (Map.Entry<String, Set<String>> deviceMeasurements : deviceMeasurementsMap.entrySet()) {
       String selectedDevice = deviceMeasurements.getKey();
@@ -254,7 +254,7 @@ public class MetadataQuerierByFileImpl implements IMetadataQuerier {
    * @return LocateStatus
    */
   private LocateStatus checkLocateStatus(ChunkGroupMetaData chunkGroupMetaData,
-      long spacePartitionStartPos, long spacePartitionEndPos) {
+                                         long spacePartitionStartPos, long spacePartitionEndPos) {
     long startOffsetOfChunkGroup = chunkGroupMetaData.getStartOffsetOfChunkGroup();
     long endOffsetOfChunkGroup = chunkGroupMetaData.getEndOffsetOfChunkGroup();
     long middleOffsetOfChunkGroup = (startOffsetOfChunkGroup + endOffsetOfChunkGroup) / 2;

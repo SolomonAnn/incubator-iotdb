@@ -70,7 +70,7 @@ public class MemUtils {
 
   public static long getRecordSize(BatchInsertPlan batchInsertPlan) {
     long memSize = 0;
-    for (int i = 0; i < batchInsertPlan.getMeasurements().length; i++) {
+    for (int i = 0; i < batchInsertPlan.getMeasurementPaths().length; i++) {
       switch (batchInsertPlan.getDataTypes()[i]) {
         case INT32:
           memSize += batchInsertPlan.getRowCount() * (8L + 4L); break;
@@ -101,7 +101,7 @@ public class MemUtils {
   public static long getTsRecordMem(TSRecord record) {
     long memUsed = 8; // time
     memUsed += 8; // deviceId reference
-    memUsed += getStringMem(record.deviceId);
+    memUsed += getStringMem(record.devicePath);
     for (DataPoint dataPoint : record.dataPointList) {
       memUsed += 8; // dataPoint reference
       memUsed += getDataPointMem(dataPoint);
@@ -124,7 +124,7 @@ public class MemUtils {
     // type reference
     long memUsed = 8;
     // measurementId and its reference
-    memUsed += getStringMem(dataPoint.getMeasurementId());
+    memUsed += getStringMem(dataPoint.getMeasurementPath());
     memUsed += 8;
 
     if (dataPoint instanceof FloatDataPoint) {

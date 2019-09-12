@@ -32,8 +32,8 @@ import org.apache.iotdb.tsfile.utils.BytesUtils;
 
 public class BatchInsertPlan extends PhysicalPlan {
 
-  private String device;
-  private String[] measurements;
+  private String devicePath;
+  private String[] measurementPaths;
   private TSDataType[] dataTypes;
 
   private long[] times;
@@ -53,16 +53,16 @@ public class BatchInsertPlan extends PhysicalPlan {
     super(false, OperatorType.BATCHINSERT);
   }
 
-  public BatchInsertPlan(String device, List<String> measurements) {
+  public BatchInsertPlan(String devicePath, List<String> measurementPaths) {
     super(false, OperatorType.BATCHINSERT);
-    this.device = device;
-    setMeasurements(measurements);
+    this.devicePath = devicePath;
+    setMeasurementPaths(measurementPaths);
   }
 
-  public BatchInsertPlan(String device, String[] measurements, List<Integer> dataTypes) {
+  public BatchInsertPlan(String devicePath, String[] measurementPaths, List<Integer> dataTypes) {
     super(false, OperatorType.BATCHINSERT);
-    this.device = device;
-    this.measurements = measurements;
+    this.devicePath = devicePath;
+    this.measurementPaths = measurementPaths;
     setDataTypes(dataTypes);
   }
 
@@ -73,8 +73,8 @@ public class BatchInsertPlan extends PhysicalPlan {
       return paths;
     }
     List<Path> ret = new ArrayList<>();
-    for (String m : measurements) {
-      ret.add(new Path(device, m));
+    for (String m : measurementPaths) {
+      ret.add(new Path(devicePath, m));
     }
     paths = ret;
     return ret;
@@ -85,10 +85,10 @@ public class BatchInsertPlan extends PhysicalPlan {
     int type = PhysicalPlanType.BATCHINSERT.ordinal();
     buffer.put((byte) type);
 
-    putString(buffer, device);
+    putString(buffer, devicePath);
 
-    buffer.putInt(measurements.length);
-    for (String m : measurements) {
+    buffer.putInt(measurementPaths.length);
+    for (String m : measurementPaths) {
       putString(buffer, m);
     }
 
@@ -108,7 +108,7 @@ public class BatchInsertPlan extends PhysicalPlan {
     }
 
     if (valueBuffer == null) {
-      for (int i = 0; i < measurements.length; i++) {
+      for (int i = 0; i < measurementPaths.length; i++) {
         TSDataType dataType = dataTypes[i];
         switch (dataType) {
           case INT32:
@@ -171,16 +171,16 @@ public class BatchInsertPlan extends PhysicalPlan {
 
   @Override
   public void deserializeFrom(ByteBuffer buffer) {
-    this.device = readString(buffer);
+    this.devicePath = readString(buffer);
 
-    int measurementSize = buffer.getInt();
-    this.measurements = new String[measurementSize];
-    for (int i = 0; i < measurementSize; i++) {
-      measurements[i] = readString(buffer);
+    int measurementPathsSize = buffer.getInt();
+    this.measurementPaths = new String[measurementPathsSize];
+    for (int i = 0; i < measurementPathsSize; i++) {
+      measurementPaths[i] = readString(buffer);
     }
 
-    this.dataTypes = new TSDataType[measurementSize];
-    for (int i = 0; i < measurementSize; i++) {
+    this.dataTypes = new TSDataType[measurementPathsSize];
+    for (int i = 0; i < measurementPathsSize; i++) {
       dataTypes[i] = TSDataType.deserialize(buffer.getShort());
     }
 
@@ -188,29 +188,29 @@ public class BatchInsertPlan extends PhysicalPlan {
     this.times = new long[rows];
     QueryDataSetUtils.readTimesFromBuffer(buffer, rows);
 
-    QueryDataSetUtils.readValuesFromBuffer(buffer, dataTypes, measurementSize, rows);
+    QueryDataSetUtils.readValuesFromBuffer(buffer, dataTypes, measurementPathsSize, rows);
   }
 
 
-  public String getDevice() {
-    return device;
+  public String getDevicePath() {
+    return devicePath;
   }
 
-  public void setDevice(String device) {
-    this.device = device;
+  public void setDevicePath(String devicePath) {
+    this.devicePath = devicePath;
   }
 
-  public String[] getMeasurements() {
-    return measurements;
+  public String[] getMeasurementPaths() {
+    return measurementPaths;
   }
 
-  public void setMeasurements(List<String> measurements) {
-    this.measurements = new String[measurements.size()];
-    measurements.toArray(this.measurements);
+  public void setMeasurementPaths(List<String> measurementPaths) {
+    this.measurementPaths = new String[measurementPaths.size()];
+    measurementPaths.toArray(this.measurementPaths);
   }
 
-  public void setMeasurements(String[] measurements) {
-    this.measurements = measurements;
+  public void setMeasurementPaths(String[] measurementPaths) {
+    this.measurementPaths = measurementPaths;
   }
 
   public TSDataType[] getDataTypes() {

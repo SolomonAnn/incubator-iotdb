@@ -165,7 +165,7 @@ public class SeqResourceReaderByTimestamp implements IReaderByTimestamp {
    * skipped.
    */
   private boolean isTsFileNotSatisfied(TsFileResource tsFile, long timestamp) {
-    return tsFile.getEndTimeMap().get(seriesPath.getDevice()) < timestamp;
+    return tsFile.getEndTimeMap().get(seriesPath.getDevicePath()) < timestamp;
   }
 
   private IReaderByTimestamp initSealedTsFileReaderByTimestamp(TsFileResource sealedTsFile,

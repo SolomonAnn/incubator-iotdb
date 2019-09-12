@@ -165,17 +165,17 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
   @Override
   public boolean update(Path path, long startTime, long endTime, String value)
       throws ProcessorException {
-    String deviceId = path.getDevice();
-    String measurementId = path.getMeasurement();
+    String devicePath = path.getDevicePath();
+    String measurementPath = path.getMeasurementPath();
     try {
-      String fullPath = deviceId + "." + measurementId;
+      String fullPath = devicePath + "." + measurementPath;
       if (!mManager.pathExist(fullPath)) {
         throw new ProcessorException(String.format("Time series %s does not exist.", fullPath));
       }
       mManager.getStorageGroupNameByPath(fullPath);
       TSDataType dataType = mManager.getSeriesType(fullPath);
       value = checkValue(dataType, value);
-      storageEngine.update(deviceId, measurementId, startTime, endTime, dataType, value);
+      storageEngine.update(devicePath, measurementPath, startTime, endTime, dataType, value);
       return true;
     } catch (PathErrorException e) {
       throw new ProcessorException(e);
@@ -184,15 +184,15 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
 
   @Override
   public boolean delete(Path path, long timestamp) throws ProcessorException {
-    String deviceId = path.getDevice();
-    String measurementId = path.getMeasurement();
+    String devicePath = path.getDevicePath();
+    String measurementPath = path.getMeasurementPath();
     try {
       if (!mManager.pathExist(path.getFullPath())) {
         throw new ProcessorException(
             String.format("Time series %s does not exist.", path.getFullPath()));
       }
       mManager.getStorageGroupNameByPath(path.getFullPath());
-      storageEngine.delete(deviceId, measurementId, timestamp);
+      storageEngine.delete(devicePath, measurementPath, timestamp);
       return true;
     } catch (PathErrorException | StorageEngineException e) {
       throw new ProcessorException(e);
@@ -203,22 +203,22 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
   @Override
   public boolean insert(InsertPlan insertPlan) throws ProcessorException {
     try {
-      String[] measurementList = insertPlan.getMeasurements();
-      String deviceId = insertPlan.getDevice();
-      MNode node = mManager.getNodeByDeviceIdFromCache(deviceId);
+      String[] measurementList = insertPlan.getMeasurementPaths();
+      String devicePath = insertPlan.getDevicePath();
+      MNode node = mManager.getNodeByDeviceIdFromCache(devicePath);
       String[] values = insertPlan.getValues();
       TSDataType[] dataTypes = new TSDataType[measurementList.length];
 
       for (int i = 0; i < measurementList.length; i++) {
         if (!node.hasChild(measurementList[i])) {
           throw new ProcessorException(
-              String.format("Current deviceId[%s] does not contain measurement:%s",
-                  deviceId, measurementList[i]));
+              String.format("Current devicePath[%s] does not contain measurement:%s",
+                  devicePath, measurementList[i]));
         }
         MNode measurementNode = node.getChild(measurementList[i]);
         if (!measurementNode.isLeaf()) {
           throw new ProcessorException(
-              String.format("Current Path is not leaf node. %s.%s", deviceId,
+              String.format("Current Path is not leaf node. %s.%s", devicePath,
                   measurementList[i]));
         }
 
@@ -236,20 +236,20 @@ public class QueryProcessExecutor extends AbstractQueryProcessExecutor {
   @Override
   public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws ProcessorException {
     try {
-      String[] measurementList = batchInsertPlan.getMeasurements();
-      String deviceId = batchInsertPlan.getDevice();
-      MNode node = mManager.getNodeByDeviceIdFromCache(deviceId);
+      String[] measurementList = batchInsertPlan.getMeasurementPaths();
+      String devicePath = batchInsertPlan.getDevicePath();
+      MNode node = mManager.getNodeByDeviceIdFromCache(devicePath);
 
       for (String s : measurementList) {
         if (!node.hasChild(s)) {
           throw new ProcessorException(
-              String.format("Current deviceId[%s] does not contain measurement:%s",
-                  deviceId, s));
+              String.format("Current devicePath[%s] does not contain measurement:%s",
+                  devicePath, s));
         }
         MNode measurementNode = node.getChild(s);
         if (!measurementNode.isLeaf()) {
           throw new ProcessorException(
-              String.format("Current Path is not leaf node. %s.%s", deviceId, s));
+              String.format("Current Path is not leaf node. %s.%s", devicePath, s));
         }
       }
       return storageEngine.insertBatch(batchInsertPlan);

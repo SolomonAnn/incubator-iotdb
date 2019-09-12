@@ -145,8 +145,8 @@ public class UnseqResourceMergeReader extends PriorityMergeReader {
     if (filter == null) {
       return false;
     }
-    long startTime = tsFile.getStartTimeMap().get(seriesPath.getDevice());
-    long endTime = tsFile.getEndTimeMap().get(seriesPath.getDevice());
+    long startTime = tsFile.getStartTimeMap().get(seriesPath.getDevicePath());
+    long endTime = tsFile.getEndTimeMap().get(seriesPath.getDevicePath());
     return !filter.satisfyStartEndTime(startTime, endTime);
   }
 }

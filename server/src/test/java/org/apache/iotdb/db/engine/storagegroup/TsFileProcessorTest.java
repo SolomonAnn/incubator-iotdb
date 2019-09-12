@@ -56,8 +56,8 @@ public class TsFileProcessorTest {
   private TsFileProcessor processor;
   private String storageGroup = "storage_group1";
   private String filePath = "data/testUnsealedTsFileProcessor.tsfile";
-  private String deviceId = "root.vehicle.d0";
-  private String measurementId = "s0";
+  private String devicePath = "root.vehicle.d0";
+  private String measurementPath = "s0";
   private TSDataType dataType = TSDataType.INT32;
   private Map<String, String> props = Collections.emptyMap();
   private QueryContext context = EnvironmentUtils.TEST_QUERY_CONTEXT;
@@ -78,25 +78,25 @@ public class TsFileProcessorTest {
   public void testWriteAndFlush()
       throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
-        SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
+        SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
 
     Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair = processor
-        .query(deviceId, measurementId, dataType, props, context);
+        .query(devicePath, measurementPath, dataType, props, context);
     ReadOnlyMemChunk left = pair.left;
     List<ChunkMetaData> right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(0, right.size());
 
     for (int i = 1; i <= 100; i++) {
-      TSRecord record = new TSRecord(i, deviceId);
-      record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
+      TSRecord record = new TSRecord(i, devicePath);
+      record.addTuple(DataPoint.getDataPoint(dataType, measurementPath, String.valueOf(i)));
       processor.insert(new InsertPlan(record));
     }
 
     // query data in memory
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     assertFalse(left.isEmpty());
     int num = 1;
@@ -111,12 +111,12 @@ public class TsFileProcessorTest {
     // flush synchronously
     processor.syncFlush();
 
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(1, right.size());
-    assertEquals(measurementId, right.get(0).getMeasurementUid());
+    assertEquals(measurementPath, right.get(0).getMeasurementUid());
     assertEquals(dataType, right.get(0).getTsDataType());
     processor.syncClose();
   }
@@ -125,25 +125,25 @@ public class TsFileProcessorTest {
   public void testWriteAndRestoreMetadata()
       throws IOException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
-        SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
+        SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
 
     Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair = processor
-        .query(deviceId, measurementId, dataType, props, context);
+        .query(devicePath, measurementPath, dataType, props, context);
     ReadOnlyMemChunk left = pair.left;
     List<ChunkMetaData> right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(0, right.size());
 
     for (int i = 1; i <= 100; i++) {
-      TSRecord record = new TSRecord(i, deviceId);
-      record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
+      TSRecord record = new TSRecord(i, devicePath);
+      record.addTuple(DataPoint.getDataPoint(dataType, measurementPath, String.valueOf(i)));
       processor.insert(new InsertPlan(record));
     }
 
     // query data in memory
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     assertFalse(left.isEmpty());
     int num = 1;
@@ -158,12 +158,12 @@ public class TsFileProcessorTest {
     // flush synchronously
     processor.syncFlush();
 
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(1, right.size());
-    assertEquals(measurementId, right.get(0).getMeasurementUid());
+    assertEquals(measurementPath, right.get(0).getMeasurementUid());
     assertEquals(dataType, right.get(0).getTsDataType());
 
     RestorableTsFileIOWriter tsFileIOWriter = processor.getWriter();
@@ -192,12 +192,12 @@ public class TsFileProcessorTest {
   public void testMultiFlush()
       throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
-        SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE, x -> {
+        SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
         () -> true, true);
 
     Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair = processor
-        .query(deviceId, measurementId, dataType, props, context);
+        .query(devicePath, measurementPath, dataType, props, context);
     ReadOnlyMemChunk left = pair.left;
     List<ChunkMetaData> right = pair.right;
     assertTrue(left.isEmpty());
@@ -205,20 +205,20 @@ public class TsFileProcessorTest {
 
     for (int flushId = 0; flushId < 10; flushId++) {
       for (int i = 1; i <= 10; i++) {
-        TSRecord record = new TSRecord(i, deviceId);
-        record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
+        TSRecord record = new TSRecord(i, devicePath);
+        record.addTuple(DataPoint.getDataPoint(dataType, measurementPath, String.valueOf(i)));
         processor.insert(new InsertPlan(record));
       }
       processor.asyncFlush();
     }
     processor.syncFlush();
 
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(10, right.size());
-    assertEquals(measurementId, right.get(0).getMeasurementUid());
+    assertEquals(measurementPath, right.get(0).getMeasurementUid());
     assertEquals(dataType, right.get(0).getTsDataType());
     processor.syncClose();
   }
@@ -228,7 +228,7 @@ public class TsFileProcessorTest {
   public void testWriteAndClose()
       throws WriteProcessException, IOException, PathErrorException {
     processor = new TsFileProcessor(storageGroup, new File(filePath),
-        SchemaUtils.constructSchema(deviceId), SysTimeVersionController.INSTANCE,
+        SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE,
         unsealedTsFileProcessor -> {
           TsFileResource resource = unsealedTsFileProcessor.getTsFileResource();
           synchronized (resource) {
@@ -245,20 +245,20 @@ public class TsFileProcessorTest {
         }, () -> true, true);
 
     Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair = processor
-        .query(deviceId, measurementId, dataType, props, context);
+        .query(devicePath, measurementPath, dataType, props, context);
     ReadOnlyMemChunk left = pair.left;
     List<ChunkMetaData> right = pair.right;
     assertTrue(left.isEmpty());
     assertEquals(0, right.size());
 
     for (int i = 1; i <= 100; i++) {
-      TSRecord record = new TSRecord(i, deviceId);
-      record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
+      TSRecord record = new TSRecord(i, devicePath);
+      record.addTuple(DataPoint.getDataPoint(dataType, measurementPath, String.valueOf(i)));
       processor.insert(new InsertPlan(record));
     }
 
     // query data in memory
-    pair = processor.query(deviceId, measurementId, dataType, props, context);
+    pair = processor.query(devicePath, measurementPath, dataType, props, context);
     left = pair.left;
     assertFalse(left.isEmpty());
     int num = 1;

@@ -151,7 +151,7 @@ public class RestorableTsFileIOWriter extends TsFileIOWriter {
 
     if (!newlyFlushedMetadataList.isEmpty()) {
       for (ChunkGroupMetaData rowGroupMetaData : newlyFlushedMetadataList) {
-        String deviceId = rowGroupMetaData.getDeviceID();
+        String deviceId = rowGroupMetaData.getDevicePath();
         for (ChunkMetaData chunkMetaData : rowGroupMetaData.getChunkMetaDataList()) {
           String measurementId = chunkMetaData.getMeasurementUid();
           if (!metadatas.containsKey(deviceId)) {

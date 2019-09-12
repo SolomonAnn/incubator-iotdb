@@ -24,7 +24,7 @@ import org.apache.iotdb.tsfile.utils.StringContainer;
 import org.apache.iotdb.tsfile.write.record.datapoint.DataPoint;
 
 /**
- * TSRecord is a kind of format that TsFile receives.TSRecord contains timestamp, deviceId and a
+ * TSRecord is a kind of format that TsFile receives.TSRecord contains timestamp, devicePath and a
  * list of data points.
  */
 public class TSRecord {
@@ -34,9 +34,9 @@ public class TSRecord {
    **/
   public long time;
   /**
-   * deviceId of this TSRecord.
+   * devicePath of this TSRecord.
    **/
-  public String deviceId;
+  public String devicePath;
   /**
    * all value of this TSRecord.
    **/
@@ -46,11 +46,11 @@ public class TSRecord {
    * constructor of TSRecord.
    *
    * @param timestamp timestamp of this TSRecord
-   * @param deviceId deviceId of this TSRecord
+   * @param devicePath devicePath of this TSRecord
    */
-  public TSRecord(long timestamp, String deviceId) {
+  public TSRecord(long timestamp, String devicePath) {
     this.time = timestamp;
-    this.deviceId = deviceId;
+    this.devicePath = devicePath;
   }
 
   public void setTime(long timestamp) {
@@ -77,7 +77,7 @@ public class TSRecord {
   @Override
   public String toString() {
     StringContainer sc = new StringContainer(" ");
-    sc.addTail("{device id:", deviceId, "time:", time, ",data:[");
+    sc.addTail("{device id:", devicePath, "time:", time, ",data:[");
     for (DataPoint tuple : dataPointList) {
       sc.addTail(tuple);
     }

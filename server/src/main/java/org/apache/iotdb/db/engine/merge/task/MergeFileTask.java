@@ -156,7 +156,7 @@ class MergeFileTask {
   private void writeMergedChunkGroup(ChunkGroupMetaData chunkGroupMetaData,
       TsFileSequenceReader reader, TsFileIOWriter fileWriter)
       throws IOException {
-    fileWriter.startChunkGroup(chunkGroupMetaData.getDeviceID());
+    fileWriter.startChunkGroup(chunkGroupMetaData.getDevicePath());
     long version = chunkGroupMetaData.getVersion();
     for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
       Chunk chunk = reader.readMemChunk(chunkMetaData);
@@ -190,7 +190,7 @@ class MergeFileTask {
           logger.debug("{} find {} unmerged chunks", taskName, chunkMetaDataList.size());
         }
 
-        fileWriter.startChunkGroup(path.getDevice());
+        fileWriter.startChunkGroup(path.getDevicePath());
         long maxVersion = writeUnmergedChunks(chunkStartTimes, chunkMetaDataList,
             resource.getFileReader(seqFile), fileWriter);
         fileWriter.endChunkGroup(maxVersion + 1);

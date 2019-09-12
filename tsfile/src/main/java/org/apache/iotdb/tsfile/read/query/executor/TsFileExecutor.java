@@ -161,7 +161,7 @@ public class TsFileExecutor implements QueryExecutor {
       FileSeriesReader seriesReader;
       if (chunkMetaDataList.isEmpty()) {
         seriesReader = new EmptyFileSeriesReader();
-        dataTypes.add(metadataQuerier.getDataType(path.getMeasurement()));
+        dataTypes.add(metadataQuerier.getDataType(path.getMeasurementPath()));
       } else {
         if (timeFilter == null) {
           seriesReader = new FileSeriesReaderWithoutFilter(chunkLoader, chunkMetaDataList);

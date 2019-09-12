@@ -33,7 +33,6 @@ import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.rescon.TVListAllocator;
 import org.apache.iotdb.db.utils.MemUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
 
 public abstract class AbstractMemTable implements IMemTable {
 
@@ -67,10 +66,10 @@ public abstract class AbstractMemTable implements IMemTable {
     return memTableMap.containsKey(deviceId) && memTableMap.get(deviceId).containsKey(measurement);
   }
 
-  private IWritableMemChunk createIfNotExistAndGet(String device, String measurement,
+  private IWritableMemChunk createIfNotExistAndGet(String devicePath, String measurementPath,
       TSDataType dataType) throws PathErrorException {
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(device);
-    Long measurementId = MManager.getInstance().getMeasurementIdByPath(measurement);
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(devicePath);
+    Long measurementId = MManager.getInstance().getMeasurementIdByPath(devicePath, measurementPath);
     if (!memTableMap.containsKey(deviceId)) {
       memTableMap.put(deviceId, new HashMap<>());
     }
@@ -87,7 +86,7 @@ public abstract class AbstractMemTable implements IMemTable {
   @Override
   public void insert(InsertPlan insertPlan) throws PathErrorException {
     for (int i = 0; i < insertPlan.getValues().length; i++) {
-      write(insertPlan.getDevice(), insertPlan.getMeasurements()[i],
+      write(insertPlan.getDevicePath(), insertPlan.getMeasurementPaths()[i],
           insertPlan.getDataTypes()[i], insertPlan.getTime(), insertPlan.getValues()[i]);
     }
     long recordSizeInByte = MemUtils.getRecordSize(insertPlan);
@@ -111,9 +110,9 @@ public abstract class AbstractMemTable implements IMemTable {
 
   @Override
   public void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException {
-    for (int i = 0; i < batchInsertPlan.getMeasurements().length; i++) {
-      IWritableMemChunk memSeries = createIfNotExistAndGet(batchInsertPlan.getDevice(),
-          batchInsertPlan.getMeasurements()[i], batchInsertPlan.getDataTypes()[i]);
+    for (int i = 0; i < batchInsertPlan.getMeasurementPaths().length; i++) {
+      IWritableMemChunk memSeries = createIfNotExistAndGet(batchInsertPlan.getDevicePath(),
+          batchInsertPlan.getMeasurementPaths()[i], batchInsertPlan.getDataTypes()[i]);
       memSeries.write(batchInsertPlan.getTimes(), batchInsertPlan.getColumns()[i], batchInsertPlan.getDataTypes()[i], indexes);
     }
   }
@@ -164,12 +163,12 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
 
-  private long findUndeletedTime(String deviceId, String measurement) {
+  private long findUndeletedTime(String devicePath, String measurementPath) {
     long undeletedTime = Long.MIN_VALUE;
     for (Modification modification : modifications) {
       if (modification instanceof Deletion) {
         Deletion deletion = (Deletion) modification;
-        if (deletion.getDevice().equals(deviceId) && deletion.getMeasurement().equals(measurement)
+        if (deletion.getDevicePath().equals(devicePath) && deletion.getMeasurementPath().equals(measurementPath)
             && deletion.getTimestamp() > undeletedTime) {
           undeletedTime = deletion.getTimestamp();
         }
@@ -179,10 +178,10 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
   @Override
-  public void delete(String deviceId, String measurementId, long timestamp) {
-    Map<Long, IWritableMemChunk> deviceMap = memTableMap.get(deviceId);
+  public void delete(String devicePath, String measurementPath, long timestamp) {
+    Map<Long, IWritableMemChunk> deviceMap = memTableMap.get(devicePath);
     if (deviceMap != null) {
-      IWritableMemChunk chunk = deviceMap.get(measurementId);
+      IWritableMemChunk chunk = deviceMap.get(measurementPath);
       if (chunk == null) {
         return;
       }

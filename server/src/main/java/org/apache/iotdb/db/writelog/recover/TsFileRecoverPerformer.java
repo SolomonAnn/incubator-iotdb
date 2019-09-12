@@ -115,7 +115,7 @@ public class TsFileRecoverPerformer {
                   .getChunkGroupMetaDataList();
               for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
                 for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-                  Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+                  Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDevicePath());
                   tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
                   tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
                 }
@@ -170,7 +170,7 @@ public class TsFileRecoverPerformer {
         for (ChunkGroupMetaData chunkGroupMetaData : deviceMetadata
             .getChunkGroupMetaDataList()) {
           for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-            Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+            Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDevicePath());
             tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
             tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
           }
@@ -185,7 +185,7 @@ public class TsFileRecoverPerformer {
     for (ChunkGroupMetaData chunkGroupMetaData : restorableTsFileIOWriter
         .getChunkGroupMetaDatas()) {
       for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-        Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDeviceID());
+        Long deviceId = MManager.getInstance().getDeviceIdByPath(chunkGroupMetaData.getDevicePath());
         tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
         tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
       }

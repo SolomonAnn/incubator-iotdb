@@ -35,8 +35,8 @@ import org.junit.Before;
 public abstract class ReaderTestHelper {
 
   protected String storageGroup = "storage_group1";
-  protected String deviceId = "root.vehicle.d0";
-  protected String measurementId = "s0";
+  protected String devicePath = "root.vehicle.d0";
+  protected String measurementPath = "s0";
   protected StorageGroupProcessor storageGroupProcessor;
   private String systemDir = "data/info";
 
@@ -62,8 +62,8 @@ public abstract class ReaderTestHelper {
   abstract protected void insertData() throws IOException;
 
   protected void insertOneRecord(long time, int num) throws PathErrorException {
-    TSRecord record = new TSRecord(time, deviceId);
-    record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(num)));
+    TSRecord record = new TSRecord(time, devicePath);
+    record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath, String.valueOf(num)));
     storageGroupProcessor.insert(new InsertPlan(record));
   }
 

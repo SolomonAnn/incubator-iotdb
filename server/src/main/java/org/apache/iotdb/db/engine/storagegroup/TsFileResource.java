@@ -136,9 +136,9 @@ public class TsFileResource {
       int size = ReadWriteIOUtils.readInt(inputStream);
       Map<Long, Long> startTimes = new HashMap<>();
       for (int i = 0; i < size; i++) {
-        Long path = ReadWriteIOUtils.readLong(inputStream);
+        Long deviceId = ReadWriteIOUtils.readLong(inputStream);
         long time = ReadWriteIOUtils.readLong(inputStream);
-        startTimes.put(path, time);
+        startTimes.put(deviceId, time);
       }
       size = ReadWriteIOUtils.readInt(inputStream);
       Map<Long, Long> endTimes = new HashMap<>();
@@ -152,17 +152,17 @@ public class TsFileResource {
     }
   }
 
-  public void updateStartTime(Long device, long time) {
-    long startTime = startTimeMap.getOrDefault(device, Long.MAX_VALUE);
+  public void updateStartTime(Long deviceId, long time) {
+    long startTime = startTimeMap.getOrDefault(deviceId, Long.MAX_VALUE);
     if (time < startTime) {
-      startTimeMap.put(device, time);
+      startTimeMap.put(deviceId, time);
     }
   }
 
-  public void updateEndTime(Long device, long time) {
-    long endTime = endTimeMap.getOrDefault(device, Long.MIN_VALUE);
+  public void updateEndTime(Long deviceId, long time) {
+    long endTime = endTimeMap.getOrDefault(deviceId, Long.MIN_VALUE);
     if (time > endTime) {
-      endTimeMap.put(device, time);
+      endTimeMap.put(deviceId, time);
     }
   }
 
@@ -189,8 +189,8 @@ public class TsFileResource {
     return modFile;
   }
 
-  public boolean containsDevice(String deviceId) {
-    return startTimeMap.containsKey(deviceId);
+  public boolean containsDevice(String devicePath) {
+    return startTimeMap.containsKey(devicePath);
   }
 
   public File getFile() {

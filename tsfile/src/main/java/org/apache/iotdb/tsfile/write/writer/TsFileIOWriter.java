@@ -145,11 +145,11 @@ public class TsFileIOWriter {
   /**
    * start a {@linkplain ChunkGroupMetaData ChunkGroupMetaData}.
    *
-   * @param deviceId device id
+   * @param devicePath device path
    */
-  public void startChunkGroup(String deviceId) throws IOException {
-    LOG.debug("start chunk group:{}, file position {}", deviceId, out.getPosition());
-    currentChunkGroupMetaData = new ChunkGroupMetaData(deviceId, new ArrayList<>(),
+  public void startChunkGroup(String devicePath) throws IOException {
+    LOG.debug("start chunk group:{}, file position {}", devicePath, out.getPosition());
+    currentChunkGroupMetaData = new ChunkGroupMetaData(devicePath, new ArrayList<>(),
         out.getPosition());
   }
 
@@ -159,7 +159,7 @@ public class TsFileIOWriter {
   public void endChunkGroup(long version) throws IOException {
     long dataSize = out.getPosition() - currentChunkGroupMetaData.getStartOffsetOfChunkGroup();
     ChunkGroupFooter chunkGroupFooter = new ChunkGroupFooter(
-        currentChunkGroupMetaData.getDeviceID(),
+        currentChunkGroupMetaData.getDevicePath(),
         dataSize, currentChunkGroupMetaData.getChunkMetaDataList().size());
     chunkGroupFooter.serializeTo(out.wrapAsStream());
     currentChunkGroupMetaData.setEndOffsetOfChunkGroup(out.getPosition());
@@ -302,7 +302,7 @@ public class TsFileIOWriter {
 
     TsDeviceMetadata currentTsDeviceMetadata;
 
-    // flush TsDeviceMetadata by string order of deviceId
+    // flush TsDeviceMetadata by string order of devicePath
     for (Map.Entry<String, TsDeviceMetadata> entry : getAllTsDeviceMetadata(chunkGroupMetaDataList)
         .entrySet()) {
       // update statistics in TsDeviceMetadata
@@ -332,7 +332,7 @@ public class TsFileIOWriter {
     TreeMap<String, TsDeviceMetadata> tsDeviceMetadataMap = new TreeMap<>();
 
     for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
-      currentDevice = chunkGroupMetaData.getDeviceID();
+      currentDevice = chunkGroupMetaData.getDevicePath();
 
       if (!tsDeviceMetadataMap.containsKey(currentDevice)) {
         TsDeviceMetadata tsDeviceMetadata = new TsDeviceMetadata();
@@ -427,13 +427,13 @@ public class TsFileIOWriter {
     Iterator<ChunkGroupMetaData> chunkGroupMetaDataIterator = chunkGroupMetaDataList.iterator();
     while (chunkGroupMetaDataIterator.hasNext()) {
       ChunkGroupMetaData chunkGroupMetaData = chunkGroupMetaDataIterator.next();
-      String deviceId = chunkGroupMetaData.getDeviceID();
+      String devicePath = chunkGroupMetaData.getDevicePath();
       int chunkNum = chunkGroupMetaData.getChunkMetaDataList().size();
       Iterator<ChunkMetaData> chunkMetaDataIterator =
           chunkGroupMetaData.getChunkMetaDataList().iterator();
       while (chunkMetaDataIterator.hasNext()) {
         ChunkMetaData chunkMetaData = chunkMetaDataIterator.next();
-        Path path = new Path(deviceId, chunkMetaData.getMeasurementUid());
+        Path path = new Path(devicePath, chunkMetaData.getMeasurementUid());
         int startTimeIdx = startTimeIdxes.get(path);
         List<Long> pathChunkStartTimes = chunkStartTimes.get(path);
         boolean chunkValid = startTimeIdx < pathChunkStartTimes.size()

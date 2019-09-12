@@ -92,13 +92,13 @@ public class DeviceMetaDataCache {
       TsFileMetaData fileMetaData = TsFileMetaDataCache.getInstance().get(resource);
       TsDeviceMetadata deviceMetaData = TsFileMetadataUtils
           .getTsDeviceMetaData(resource, seriesPath, fileMetaData);
-      return TsFileMetadataUtils.getChunkMetaDataList(seriesPath.getMeasurement(), deviceMetaData);
+      return TsFileMetadataUtils.getChunkMetaDataList(seriesPath.getMeasurementPath(), deviceMetaData);
     }
 
     StringBuilder builder = new StringBuilder(resource.getFile().getPath()).append(".").append(seriesPath
-        .getDevice());
+        .getDevicePath());
     String pathDeviceStr = builder.toString();
-    String key = builder.append(".").append(seriesPath.getMeasurement()).toString();
+    String key = builder.append(".").append(seriesPath.getMeasurementPath()).toString();
     Object devicePathObject = pathDeviceStr.intern();
 
     synchronized (lruCache) {
@@ -136,7 +136,7 @@ public class DeviceMetaDataCache {
           .getChunkMetaDataList(calHotSensorSet(seriesPath), deviceMetaData);
       synchronized (lruCache) {
         chunkMetaData.forEach((path, chunkMetaDataList) -> {
-          String k = pathDeviceStr + "." + path.getMeasurement();
+          String k = pathDeviceStr + "." + path.getMeasurementPath();
           if (!lruCache.containsKey(k)) {
             lruCache.put(k, chunkMetaDataList);
           }
@@ -168,7 +168,7 @@ public class DeviceMetaDataCache {
       }
       try {
         return storageEngine
-            .calTopKMeasurement(seriesPath.getDevice(), seriesPath.getMeasurement(),
+            .calTopKMeasurement(seriesPath.getDevicePath(), seriesPath.getMeasurementPath(),
                 hotSensorProportion);
       } catch (Exception e) {
         throw new IOException(e);

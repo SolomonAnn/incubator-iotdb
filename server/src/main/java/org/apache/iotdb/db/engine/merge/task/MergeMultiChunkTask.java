@@ -154,7 +154,7 @@ class MergeMultiChunkTask {
   private void pathsMergeOneFile(int seqFileIdx, IPointReader[] unseqReaders)
       throws IOException, PathErrorException {
     TsFileResource currTsFile = resource.getSeqFiles().get(seqFileIdx);
-    String device = currMergingPaths.get(0).getDevice();
+    String device = currMergingPaths.get(0).getDevicePath();
     Long deviceId = MManager.getInstance().getDeviceIdByPath(device);
     Long currDeviceMinTime = currTsFile.getStartTimeMap().get(deviceId);
     if (currDeviceMinTime == null) {
@@ -190,7 +190,7 @@ class MergeMultiChunkTask {
 
     RestorableTsFileIOWriter mergeFileWriter = resource.getMergeFileWriter(currTsFile);
     for (Path path : currMergingPaths) {
-      MeasurementSchema schema = resource.getSchema(path.getMeasurement());
+      MeasurementSchema schema = resource.getSchema(path.getMeasurementPath());
       mergeFileWriter.addSchema(schema);
     }
     // merge unseq data with seq data in this file or small chunks in this file into a larger chunk
@@ -279,7 +279,7 @@ class MergeMultiChunkTask {
       int pathIdx = metaListEntry.getPathId();
       boolean isLastChunk = !metaListEntry.hasNext();
       Path path = currMergingPaths.get(pathIdx);
-      MeasurementSchema measurementSchema = resource.getSchema(path.getMeasurement());
+      MeasurementSchema measurementSchema = resource.getSchema(path.getMeasurementPath());
       IChunkWriter chunkWriter = resource.getChunkWriter(measurementSchema);
 
       boolean chunkOverflowed = MergeUtils.isChunkOverflowed(currTimeValuePairs[pathIdx], currMeta);

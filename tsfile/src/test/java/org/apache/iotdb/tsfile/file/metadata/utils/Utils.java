@@ -147,7 +147,7 @@ public class Utils {
   public static void isChunkGroupMetaDataEqual(ChunkGroupMetaData metadata1,
       ChunkGroupMetaData metadata2) {
     if (Utils.isTwoObjectsNotNULL(metadata1, metadata2, "ChunkGroupMetaData")) {
-      assertTrue(metadata1.getDeviceID().equals(metadata2.getDeviceID()));
+      assertTrue(metadata1.getDevicePath().equals(metadata2.getDevicePath()));
 
       if (Utils
           .isTwoObjectsNotNULL(metadata1.getChunkMetaDataList(), metadata2.getChunkMetaDataList(),

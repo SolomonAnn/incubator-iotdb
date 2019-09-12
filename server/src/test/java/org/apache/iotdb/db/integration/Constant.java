@@ -91,10 +91,10 @@ public class Constant {
     StringBuilder measurements = new StringBuilder();
     StringBuilder values = new StringBuilder();
     for (DataPoint dataPoint : record.dataPointList) {
-      measurements.append(",").append(dataPoint.getMeasurementId());
+      measurements.append(",").append(dataPoint.getMeasurementPath());
       values.append(",").append(dataPoint.getValue());
     }
     return String
-        .format(insertTemplate, record.deviceId, measurements.toString(), record.time, values);
+        .format(insertTemplate, record.devicePath, measurements.toString(), record.time, values);
   }
 }

@@ -24,14 +24,6 @@ import java.util.*;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import org.apache.iotdb.db.exception.PathErrorException;
@@ -54,26 +46,23 @@ public class MTree implements Serializable {
   private static final String SERIES_NOT_CORRECT = "Timeseries %s is not correct";
   private static final String NOT_SERIES_PATH = "The prefix of the seriesPath %s is not one storage group seriesPath";
   private MNode root;
-  private MLeaf leafHead;
   private BiMap<String, Long> devicePathToId;
-  private BiMap<MLeaf, Long> measurementNodeToId;
+  private Map<String, Map<String, MLeaf>> measurementPathToNodeForEachStorageGroup;
   private Long deviceSequenceNo;
   private Long measurementSequenceNo;
 
   MTree(String rootName) {
     this.root = new MNode(rootName, null, false);
-    this.leafHead = null;
     this.devicePathToId = HashBiMap.create();
-    this.measurementNodeToId = HashBiMap.create();
+    this.measurementPathToNodeForEachStorageGroup = new HashMap<>();
     this.deviceSequenceNo = 0L;
     this.measurementSequenceNo = 0L;
   }
 
   public MTree(MNode root) {
     this.root = root;
-    this.leafHead = null;
     this.devicePathToId = HashBiMap.create();
-    this.measurementNodeToId = HashBiMap.create();
+    this.measurementPathToNodeForEachStorageGroup = new HashMap<>();
     this.deviceSequenceNo = 0L;
     this.measurementSequenceNo = 0L;
   }
@@ -103,8 +92,10 @@ public class MTree implements Serializable {
     MNode cur = findLeafParent(nodeNames);
     String levelPath = cur.getDataFileName();
     String leafPath = nodeNames[nodeNames.length - 1];
+    String devicePath = trimmedTimeseriesPath.substring(0, trimmedTimeseriesPath.length() - leafPath.length() - 1);
+    String storageGroupPath = getStorageGroupNameByPath(devicePath);
 
-    MLeaf leaf = getLeafNode(leafPath, cur, dataType, encoding, compressor);
+    MLeaf leaf = getLeafNode(storageGroupPath, leafPath, dataType, encoding, compressor, getMeasurementSequenceNo());
     if (props != null && !props.isEmpty()) {
       leaf.getSchema().setProps(props);
     }
@@ -115,9 +106,8 @@ public class MTree implements Serializable {
               cur.getName(), timeseriesPath));
     }
     cur.addChild(leafPath, leaf);
-    leaf.addParent(cur);
-    addDevicePath(trimmedTimeseriesPath.substring(0, trimmedTimeseriesPath.length() - leafPath.length() - 1));
-    addMeasurementNode(leaf);
+    addDevicePathToId(devicePath);
+    addMeasurementPathToNodeForEachStorageGroup(storageGroupPath, leafPath, leaf);
   }
 
   private MNode findLeafParent(String[] nodeNames) throws PathErrorException {
@@ -146,118 +136,64 @@ public class MTree implements Serializable {
     return cur;
   }
 
-  private MLeaf getLeafNode(String leafPath, MNode parent, TSDataType dataType, TSEncoding encoding,
-                        CompressionType compressor) {
-    MLeaf cur = getLeafHead();
-    MLeaf leaf;
-    if (cur == null) {
-      leaf = new MLeaf(leafPath, parent, dataType, encoding, compressor);
-      setLeafHead(leaf);
-      return leaf;
-    }
-    while (true) {
-      if (leafPath.equals(cur.getName())) {
-        if (getStorageGroupNode(parent) == getStorageGroupNode(cur)) {
-          return cur;
-        }
+  private MLeaf getLeafNode(String storageGroupPath, String leafPath, TSDataType dataType, TSEncoding encoding,
+                            CompressionType compressor, Long id) {
+    Map<String, MLeaf> measurementPathToNode;
+    if (measurementPathToNodeForEachStorageGroup.containsKey(storageGroupPath)) {
+      measurementPathToNode = measurementPathToNodeForEachStorageGroup.get(storageGroupPath);
+      if (measurementPathToNode.containsKey(leafPath)) {
+        MLeaf leaf = measurementPathToNode.get(leafPath);
+        leaf.addParentsCounter();
+        return leaf;
       }
-      if (!cur.hasNextSibling()) {
-        break;
-      }
-      cur = cur.getNextSibling();
     }
-    leaf = new MLeaf(leafPath, parent, dataType, encoding, compressor);
-    cur.setNextSibling(leaf);
-    leaf.setPreviousSibling(cur);
-    return leaf;
+    return new MLeaf(leafPath, dataType, encoding, compressor, id);
   }
 
-  private MNode getStorageGroupNode(MNode node) {
-    MNode cur = node.getParent();
-    while (cur != null) {
-      if (cur.isStorageLevel()) {
-        break;
-      }
-      cur = cur.getParent();
-    }
-    return cur;
-  }
-
-  public Long getDeviceIdByPath(String path) throws PathErrorException {
-    if (getDevicePathToId().containsKey(path)) {
-      return getDevicePathToId().get(path);
-    } else {
-      throw new PathErrorException(
-          String.format("Device path %s is not right.", path));
-    }
-  }
-
-  public Long getMeasurementIdByPath(String path) throws PathErrorException {
-    MNode leaf = findLeafNode(path);
-    if (leaf != null && getMeasurementNodeToId().containsKey(leaf)) {
-      return getMeasurementNodeToId().get(leaf);
-    } else {
-      throw new PathErrorException(
-          String.format("Measurement path %s is not right.", path));
-    }
-  }
-
-  public String getDevicePathById(Long id) throws PathErrorException {
-    if (getDevicePathToId().containsValue(id)) {
-      return getDevicePathToId().inverse().get(id);
-    } else {
-      throw new PathErrorException(
-          String.format("Device id %d is not right.", id));
-    }
-  }
-
-  public String getMeasurementPathById(Long id) throws PathErrorException {
-    if (getMeasurementNodeToId().containsValue(id)) {
-      return getMeasurementNodeToId().inverse().get(id).getName();
-    } else {
-      throw new PathErrorException(
-          String.format("Measurement id %d is not right.", id));
-    }
-  }
-
-  private MLeaf findLeafNode(String leafPath) {
-    MLeaf leaf = getLeafHead();
-    while (leaf != null) {
-      if (leafPath.equals(leaf.getName())) {
-        break;
-      }
-      leaf = leaf.getNextSibling();
-    }
-    return leaf;
-  }
-
-  private boolean findDevicePath(String devicePath) {
-    return getDevicePathToId().containsKey(devicePath);
-  }
-
-  private boolean findMeasurementPath(MNode measurementNode) {
-    return getMeasurementNodeToId().containsKey(measurementNode);
-  }
-
-  private Long addDevicePath(String devicePath) {
-    if (findDevicePath(devicePath)) {
+  public Long getDeviceIdByPath(String devicePath) throws PathErrorException {
+    if (getDevicePathToId().containsKey(devicePath)) {
       return getDevicePathToId().get(devicePath);
     } else {
-      getDevicePathToId().put(devicePath, getDeviceSequenceNo());
-      addDeviceSequenceNo();
-      return getDeviceSequenceNo() - 1;
+      throw new PathErrorException(
+          String.format("Device path %s is not right.", devicePath));
     }
   }
 
-  private Long addMeasurementNode(MLeaf measurementNode) {
-    if (findMeasurementPath(measurementNode)) {
-      return getMeasurementNodeToId().get(measurementNode);
+  public Long getMeasurementIdByPath(String devicePath, String measurementPath) throws PathErrorException {
+    String storageGroupPath = getStorageGroupNameByPath(devicePath);
+    if (getMeasurementPathToNodeForEachStorageGroup().containsKey(storageGroupPath)) {
+      Map<String, MLeaf> measurementPathToNode = getMeasurementPathToNodeForEachStorageGroup().get(storageGroupPath);
+      if (measurementPathToNode.containsKey(measurementPath)) {
+        return measurementPathToNode.get(measurementPath).getId();
+      } else {
+        throw new PathErrorException(
+            String.format("Measurement path %s is not right.", measurementPath));
+      }
     } else {
-      getMeasurementNodeToId().put(measurementNode, getMeasurementSequenceNo());
-      addMeasurementSequenceNo();
-      return getMeasurementSequenceNo() - 1;
+      throw new PathErrorException(
+          String.format("Device path %s is not right.", devicePath));
     }
   }
+
+
+  public String getDevicePathById(Long deviceId) throws PathErrorException {
+    if (getDevicePathToId().containsValue(deviceId)) {
+      return getDevicePathToId().inverse().get(deviceId);
+    } else {
+      throw new PathErrorException(
+          String.format("Device id %d is not right.", deviceId));
+    }
+  }
+
+//  public String getMeasurementPathById(Long measurementId) throws PathErrorException {
+//    for (Map.Entry<String, MLeaf> entry : measurementPathToNode.entrySet()) {
+//      if (measurementId.equals(entry.getValue().getId())) {
+//        return entry.getKey();
+//      }
+//    }
+//    throw new PathErrorException(
+//        String.format("Measurement id %d is not right.", measurementId));
+//  }
 
   /**
    * function for checking whether the given path exists.
@@ -500,17 +436,18 @@ public class MTree implements Serializable {
     return leaf.getSchema();
   }
 
-  private MNode getLeafByPath(String path) throws PathErrorException {
+  private MLeaf getLeafByPath(String path) throws PathErrorException {
     checkPath(path);
     String[] node = path.split(DOUB_SEPARATOR);
     MNode cur = getRoot();
     for (int i = 1; i < node.length; i++) {
       cur = cur.getChild(node[i]);
     }
-    if (!cur.isLeaf()) {
+    if (cur instanceof MLeaf) {
+      return (MLeaf)cur;
+    } else {
       throw new PathErrorException(String.format(NOT_LEAF_NODE, path));
     }
-    return cur;
   }
 
   private MNode getLeafByPath(MNode node, String path) throws PathErrorException {
@@ -1138,16 +1075,12 @@ public class MTree implements Serializable {
     return root;
   }
 
-  public MLeaf getLeafHead() {
-    return leafHead;
-  }
-
   public BiMap<String, Long> getDevicePathToId() {
     return devicePathToId;
   }
 
-  public BiMap<MLeaf, Long> getMeasurementNodeToId() {
-    return measurementNodeToId;
+  public Map<String, Map<String, MLeaf>> getMeasurementPathToNodeForEachStorageGroup() {
+    return measurementPathToNodeForEachStorageGroup;
   }
 
   public Long getDeviceSequenceNo() {
@@ -1158,8 +1091,28 @@ public class MTree implements Serializable {
     return measurementSequenceNo;
   }
 
-  public void setLeafHead(MLeaf leafHead) {
-    this.leafHead = leafHead;
+  public void addDevicePathToId(String devicePath) {
+    if (!devicePathToId.containsKey(devicePath)) {
+      devicePathToId.put(devicePath, deviceSequenceNo);
+      addDeviceSequenceNo();
+    }
+  }
+
+  public void addMeasurementPathToNodeForEachStorageGroup(String storageGroupPath, String leafPath, MLeaf leafNode) {
+    Map<String, MLeaf> measurementPathToNode;
+    if (measurementPathToNodeForEachStorageGroup.containsKey(storageGroupPath)) {
+      measurementPathToNode = measurementPathToNodeForEachStorageGroup.get(storageGroupPath);
+      if (measurementPathToNode.containsKey(leafPath)) {
+        return;
+      } else {
+        measurementPathToNode.put(leafPath, leafNode);
+      }
+    } else {
+      measurementPathToNode = new HashMap<>();
+      measurementPathToNode.put(leafPath, leafNode);
+      measurementPathToNodeForEachStorageGroup.put(storageGroupPath, measurementPathToNode);
+    }
+    addMeasurementSequenceNo();
   }
 
   public void addDeviceSequenceNo() {

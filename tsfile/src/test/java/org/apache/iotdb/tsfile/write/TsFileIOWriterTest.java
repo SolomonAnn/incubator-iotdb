@@ -40,7 +40,7 @@ import org.junit.Test;
 public class TsFileIOWriterTest {
 
   private static String tsfile = "target/tsfileIOWriterTest.tsfile";
-  private static String deviceId = "device1";
+  private static String devicePath = "device1";
 
   @Before
   public void before() throws IOException {
@@ -56,7 +56,7 @@ public class TsFileIOWriterTest {
     statistics.updateStats(0L);
 
     // chunk group 1
-    writer.startChunkGroup(deviceId);
+    writer.startChunkGroup(devicePath);
     writer.startFlushChunk(measurementSchema, measurementSchema.getCompressor(),
         measurementSchema.getType(), measurementSchema.getEncodingType(), statistics, 0, 0, 0, 0);
     writer.endChunk(0);
@@ -90,7 +90,7 @@ public class TsFileIOWriterTest {
     // chunk group footer
     Assert.assertEquals(MetaMarker.CHUNK_GROUP_FOOTER, reader.readMarker());
     ChunkGroupFooter footer = reader.readChunkGroupFooter();
-    Assert.assertEquals(deviceId, footer.getDeviceID());
+    Assert.assertEquals(devicePath, footer.getDevicePath());
 
     // separator
     Assert.assertEquals(MetaMarker.SEPARATOR, reader.readMarker());

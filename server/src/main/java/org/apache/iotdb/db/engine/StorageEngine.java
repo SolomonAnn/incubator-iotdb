@@ -159,10 +159,10 @@ public class StorageEngine implements IService {
 
     StorageGroupProcessor storageGroupProcessor;
     try {
-      storageGroupProcessor = getProcessor(insertPlan.getDevice());
+      storageGroupProcessor = getProcessor(insertPlan.getDevicePath());
     } catch (Exception e) {
       logger.warn("get StorageGroupProcessor of device {} failed, because {}",
-          insertPlan.getDevice(),
+          insertPlan.getDevicePath(),
           e.getMessage(), e);
       throw new StorageEngineException(e);
     }
@@ -178,10 +178,10 @@ public class StorageEngine implements IService {
   public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws StorageEngineException, PathErrorException {
     StorageGroupProcessor storageGroupProcessor;
     try {
-      storageGroupProcessor = getProcessor(batchInsertPlan.getDevice());
+      storageGroupProcessor = getProcessor(batchInsertPlan.getDevicePath());
     } catch (Exception e) {
       logger.warn("get StorageGroupProcessor of device {} failed, because {}",
-          batchInsertPlan.getDevice(),
+          batchInsertPlan.getDevicePath(),
           e.getMessage(), e);
       throw new StorageEngineException(e);
     }
@@ -212,7 +212,7 @@ public class StorageEngine implements IService {
   /**
    * update data.
    */
-  public void update(String deviceId, String measurementId, long startTime, long endTime,
+  public void update(String devicePath, String measurementPath, long startTime, long endTime,
       TSDataType type, String v) {
     // TODO
   }
@@ -220,11 +220,11 @@ public class StorageEngine implements IService {
   /**
    * delete data of timeseries "{deviceId}.{measurementId}" with time <= timestamp.
    */
-  public void delete(String deviceId, String measurementId, long timestamp)
+  public void delete(String devicePath, String measurementPath, long timestamp)
       throws StorageEngineException {
-    StorageGroupProcessor storageGroupProcessor = getProcessor(deviceId);
+    StorageGroupProcessor storageGroupProcessor = getProcessor(devicePath);
     try {
-      storageGroupProcessor.delete(deviceId, measurementId, timestamp);
+      storageGroupProcessor.delete(devicePath, measurementPath, timestamp);
     } catch (IOException e) {
       throw new StorageEngineException(e);
     }
@@ -237,19 +237,19 @@ public class StorageEngine implements IService {
       JobFileManager filePathsManager)
       throws StorageEngineException, PathErrorException {
     //TODO use context.
-    String deviceId = seriesExpression.getSeriesPath().getDevice();
-    String measurementId = seriesExpression.getSeriesPath().getMeasurement();
-    StorageGroupProcessor storageGroupProcessor = getProcessor(deviceId);
-    return storageGroupProcessor.query(deviceId, measurementId, context, filePathsManager);
+    String devicePath = seriesExpression.getSeriesPath().getDevicePath();
+    String measurementPath = seriesExpression.getSeriesPath().getMeasurementPath();
+    StorageGroupProcessor storageGroupProcessor = getProcessor(devicePath);
+    return storageGroupProcessor.query(devicePath, measurementPath, context, filePathsManager);
   }
 
   /**
    * returns the top k% measurements that are recently used in queries.
    */
-  public Set calTopKMeasurement(String deviceId, String sensorId, double k)
+  public Set calTopKMeasurement(String devicePath, String measurementPath, double k)
       throws StorageEngineException {
-    StorageGroupProcessor storageGroupProcessor = getProcessor(deviceId);
-    return storageGroupProcessor.calTopKMeasurement(sensorId, k);
+    StorageGroupProcessor storageGroupProcessor = getProcessor(devicePath);
+    return storageGroupProcessor.calTopKMeasurement(measurementPath, k);
   }
 
   /**
@@ -315,9 +315,9 @@ public class StorageEngine implements IService {
    */
   public void addTimeSeries(Path path, TSDataType dataType, TSEncoding encoding,
       CompressionType compressor, Map<String, String> props) throws StorageEngineException {
-    StorageGroupProcessor storageGroupProcessor = getProcessor(path.getDevice());
+    StorageGroupProcessor storageGroupProcessor = getProcessor(path.getDevicePath());
     storageGroupProcessor
-        .addMeasurement(path.getMeasurement(), dataType, encoding, compressor, props);
+        .addMeasurement(path.getMeasurementPath(), dataType, encoding, compressor, props);
   }
 
 

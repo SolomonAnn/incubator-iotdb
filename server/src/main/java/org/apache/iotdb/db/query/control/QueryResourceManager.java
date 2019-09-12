@@ -87,7 +87,7 @@ public class QueryResourceManager {
       getUniquePaths(((IBinaryExpression) expression).getRight(), deviceIdSet);
     } else if (expression.getType() == ExpressionType.SERIES) {
       SingleSeriesExpression singleSeriesExp = (SingleSeriesExpression) expression;
-      deviceIdSet.add(singleSeriesExp.getSeriesPath().getDevice());
+      deviceIdSet.add(singleSeriesExp.getSeriesPath().getDevicePath());
     }
   }
 

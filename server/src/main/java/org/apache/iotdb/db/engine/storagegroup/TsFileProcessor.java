@@ -150,7 +150,7 @@ public class TsFileProcessor {
       }
     }
 
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
     // update start time of this memtable
     tsFileResource.updateStartTime(deviceId, insertPlan.getTime());
     //for sequence tsfile, we update the endTime only when the file is prepared to be closed.
@@ -183,7 +183,7 @@ public class TsFileProcessor {
       }
     }
 
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevicePath());
 
     tsFileResource.updateStartTime(deviceId, batchInsertPlan.getMinTime());
 
@@ -199,7 +199,7 @@ public class TsFileProcessor {
   }
 
   /**
-   * Delete data which belongs to the timeseries `deviceId.measurementId` and the timestamp of which
+   * Delete data which belongs to the timeseries `devicePath.measurementId` and the timestamp of which
    * <= 'timestamp' in the deletion. <br/>
    *
    * Delete data in both working MemTable and flushing MemTables.
@@ -209,7 +209,7 @@ public class TsFileProcessor {
     try {
       if (workMemTable != null) {
         workMemTable
-            .delete(deletion.getDevice(), deletion.getMeasurement(), deletion.getTimestamp());
+            .delete(deletion.getDevicePath(), deletion.getMeasurementPath(), deletion.getTimestamp());
       }
       // flushing memTables are immutable, only record this deletion in these memTables for query
       for (IMemTable memTable : flushingMemTables) {
@@ -539,13 +539,13 @@ public class TsFileProcessor {
    * memtables and then compact them into one TimeValuePairSorter). Then get the related
    * ChunkMetadata of data on disk.
    *
-   * @param deviceId device id
-   * @param measurementId sensor id
+   * @param devicePath device path
+   * @param measurementPath measurement path
    * @param dataType data type
    * @return left: the chunk data in memory; right: the chunkMetadatas of data on disk
    */
-  public Pair<ReadOnlyMemChunk, List<ChunkMetaData>> query(String deviceId,
-      String measurementId, TSDataType dataType, Map<String, String> props, QueryContext context) {
+  public Pair<ReadOnlyMemChunk, List<ChunkMetaData>> query(String devicePath,
+      String measurementPath, TSDataType dataType, Map<String, String> props, QueryContext context) {
     flushQueryLock.readLock().lock();
     try {
       MemSeriesLazyMerger memSeriesLazyMerger = new MemSeriesLazyMerger();
@@ -554,13 +554,13 @@ public class TsFileProcessor {
           continue;
         }
         ReadOnlyMemChunk memChunk = flushingMemTable
-            .query(deviceId, measurementId, dataType, props);
+            .query(devicePath, measurementPath, dataType, props);
         if (memChunk != null) {
           memSeriesLazyMerger.addMemSeries(memChunk);
         }
       }
       if (workMemTable != null) {
-        ReadOnlyMemChunk memChunk = workMemTable.query(deviceId, measurementId, dataType, props);
+        ReadOnlyMemChunk memChunk = workMemTable.query(devicePath, measurementPath, dataType, props);
         if (memChunk != null) {
           memSeriesLazyMerger.addMemSeries(memChunk);
         }
@@ -572,10 +572,10 @@ public class TsFileProcessor {
 
       ModificationFile modificationFile = tsFileResource.getModFile();
       List<Modification> modifications = context.getPathModifications(modificationFile,
-          deviceId + IoTDBConstant.PATH_SEPARATOR + measurementId);
+          devicePath + IoTDBConstant.PATH_SEPARATOR + measurementPath);
 
       List<ChunkMetaData> chunkMetaDataList = writer
-          .getVisibleMetadataList(deviceId, measurementId, dataType);
+          .getVisibleMetadataList(devicePath, measurementPath, dataType);
       QueryUtils.modifyChunkMetaData(chunkMetaDataList,
           modifications);
 

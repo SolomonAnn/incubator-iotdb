@@ -32,18 +32,32 @@ public class JDBCExample {
     try (Connection connection = DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
       statement.execute("SET STORAGE GROUP TO root.sg1");
-      statement.execute("CREATE TIMESERIES root.sg1.d1.s1 WITH DATATYPE=INT64, ENCODING=RLE");
-      statement.execute("CREATE TIMESERIES root.sg1.d1.s2 WITH DATATYPE=INT64, ENCODING=RLE");
-      statement.execute("CREATE TIMESERIES root.sg1.d1.s3 WITH DATATYPE=INT64, ENCODING=RLE");
 
-      long startTime = System.currentTimeMillis();
-      for (int i = 0; i <= 1_000_000; i++) {
-        statement.addBatch("insert into root.sg1.d1(timestamp, s1, s2, s3) values("+ i + "," + 1 + "," + 1 + "," + 1 + ")");
-        statement.executeBatch();
-        statement.clearBatch();
+      long startTime, endTime;
+      startTime = System.currentTimeMillis();
+      for (int i = 1; i <= 200_000; i++) {
+        statement.execute("CREATE TIMESERIES root.sg1.d" + i + ".s1 WITH DATATYPE=INT64, ENCODING=RLE");
       }
-      long endTime = System.currentTimeMillis();
-      System.out.println("Time Consuming: " + (endTime - startTime) + " ms");
+      endTime = System.currentTimeMillis();
+      System.out.println("Time Consuming of CREATE TIMESERIES: " + (endTime - startTime) + " ms");
+
+//      startTime = System.currentTimeMillis();
+//      for (int i = 200_001; i <= 200_011; i++) {
+//        statement.execute("CREATE TIMESERIES root.sg1.d" + i + ".s1 WITH DATATYPE=INT64, ENCODING=RLE");
+//      }
+//      endTime = System.currentTimeMillis();
+//      System.out.println("Time Consuming of CREATE extra TIMESERIES: " + (endTime - startTime) + " ms");
+
+      startTime = System.currentTimeMillis();
+      for (int i = 1; i <= 200_000; i++) {
+        for (int j = 1; j <= 100; j++) {
+            statement.addBatch("insert into root.sg1.d" + i + "(timestamp, s1) values("+ j + "," + 1 + ")");
+            statement.executeBatch();
+            statement.clearBatch();
+        }
+      }
+      endTime = System.currentTimeMillis();
+      System.out.println("Time Consuming of INSERT INTO: " + (endTime - startTime) + " ms");
 //      ResultSet resultSet = statement.executeQuery("select * from root where time <= 10");
 //      outputResult(resultSet);
 //      resultSet = statement.executeQuery("select count(*) from root");

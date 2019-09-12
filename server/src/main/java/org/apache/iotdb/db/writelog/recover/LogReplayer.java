@@ -112,7 +112,7 @@ public class LogReplayer {
   private void replayDelete(DeletePlan deletePlan) throws IOException {
     List<Path> paths = deletePlan.getPaths();
     for (Path path : paths) {
-      recoverMemTable.delete(path.getDevice(), path.getMeasurement(), deletePlan.getDeleteTime());
+      recoverMemTable.delete(path.getDevicePath(), path.getMeasurementPath(), deletePlan.getDeleteTime());
       modFile.write(new Deletion(path, versionController.nextVersion(),deletePlan.getDeleteTime()));
     }
   }
@@ -120,7 +120,7 @@ public class LogReplayer {
   private void replayInsert(InsertPlan insertPlan) throws PathErrorException {
     if (currentTsFileResource != null) {
       // the last chunk group may contain the same data with the logs, ignore such logs in seq file
-      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
       Long lastEndTime = currentTsFileResource.getEndTimeMap().get(deviceId);
       if ( lastEndTime != null && lastEndTime >= insertPlan.getTime() &&
           !acceptDuplication) {
@@ -135,7 +135,7 @@ public class LogReplayer {
         tempEndTimeMap.put(deviceId, insertPlan.getTime());
       }
     }
-    String[] measurementList = insertPlan.getMeasurements();
+    String[] measurementList = insertPlan.getMeasurementPaths();
     TSDataType[] dataTypes = new TSDataType[measurementList.length];
     for (int i = 0; i < measurementList.length; i++) {
       dataTypes[i] = schema.getMeasurementDataType(measurementList[i]);

@@ -523,7 +523,7 @@ public class TsFileSequenceReader implements AutoCloseable {
 
     ChunkGroupMetaData currentChunkGroup;
     List<ChunkMetaData> chunks = null;
-    String deviceID;
+    String devicePath;
     long startOffsetOfChunkGroup = 0;
     long endOffsetOfChunkGroup;
     long versionOfChunkGroup = 0;
@@ -619,11 +619,11 @@ public class TsFileSequenceReader implements AutoCloseable {
           case MetaMarker.CHUNK_GROUP_FOOTER:
             //this is a chunk group
             //if there is something wrong with the ChunkGroup Footer, we will drop this ChunkGroup
-            //because we can not guarantee the correctness of the deviceId.
+            //because we can not guarantee the correctness of the devicePath.
             ChunkGroupFooter chunkGroupFooter = this.readChunkGroupFooter();
-            deviceID = chunkGroupFooter.getDeviceID();
+            devicePath = chunkGroupFooter.getDevicePath();
             endOffsetOfChunkGroup = this.position();
-            currentChunkGroup = new ChunkGroupMetaData(deviceID, chunks, startOffsetOfChunkGroup);
+            currentChunkGroup = new ChunkGroupMetaData(devicePath, chunks, startOffsetOfChunkGroup);
             currentChunkGroup.setEndOffsetOfChunkGroup(endOffsetOfChunkGroup);
             currentChunkGroup.setVersion(versionOfChunkGroup++);
             newMetaData.add(currentChunkGroup);
@@ -660,12 +660,12 @@ public class TsFileSequenceReader implements AutoCloseable {
     if (tsFileMetaData == null) {
       readFileMetadata();
     }
-    if (!tsFileMetaData.containsDevice(path.getDevice())) {
+    if (!tsFileMetaData.containsDevice(path.getDevicePath())) {
       return new ArrayList<>();
     }
 
     // get the index information of TsDeviceMetadata
-    TsDeviceMetadataIndex index = tsFileMetaData.getDeviceMetadataIndex(path.getDevice());
+    TsDeviceMetadataIndex index = tsFileMetaData.getDeviceMetadataIndex(path.getDevicePath());
 
     // read TsDeviceMetadata from file
     TsDeviceMetadata tsDeviceMetadata = readTsDeviceMetaData(index);
@@ -676,7 +676,7 @@ public class TsFileSequenceReader implements AutoCloseable {
       List<ChunkMetaData> chunkMetaDataListInOneChunkGroup = chunkGroupMetaData
           .getChunkMetaDataList();
       for (ChunkMetaData chunkMetaData : chunkMetaDataListInOneChunkGroup) {
-        if (path.getMeasurement().equals(chunkMetaData.getMeasurementUid())) {
+        if (path.getMeasurementPath().equals(chunkMetaData.getMeasurementUid())) {
           chunkMetaData.setVersion(chunkGroupMetaData.getVersion());
           chunkMetaDataList.add(chunkMetaData);
         }

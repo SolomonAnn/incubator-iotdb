@@ -31,8 +31,8 @@ import org.apache.iotdb.tsfile.utils.StringContainer;
 public class Path implements Serializable {
 
   private static final long serialVersionUID = 3405277066329298200L;
-  private String measurement = null;
-  private String device = null;
+  private String measurementPath = null;
+  private String devicePath = null;
   private String fullPath;
   private String illegalPathArgument = "Path parameter is null";
 
@@ -63,16 +63,16 @@ public class Path implements Serializable {
 
   /**
    * construct a Path directly using device and measurement, no need to reformat the path
-   * @param device root.deviceType.d1
-   * @param measurement s1 , does not contain TsFileConstant.PATH_SEPARATOR
+   * @param devicePath root.deviceType.d1
+   * @param measurementPath s1 , does not contain TsFileConstant.PATH_SEPARATOR
    */
-  public Path(String device, String measurement) {
-    if (device == null || measurement == null) {
+  public Path(String devicePath, String measurementPath) {
+    if (devicePath == null || measurementPath == null) {
       throw new IllegalArgumentException(illegalPathArgument);
     }
-    this.device = device;
-    this.measurement = measurement;
-    this.fullPath = device + TsFileConstant.PATH_SEPARATOR + measurement;
+    this.devicePath = devicePath;
+    this.measurementPath = measurementPath;
+    this.fullPath = devicePath + TsFileConstant.PATH_SEPARATOR + measurementPath;
   }
 
   public static Path mergePath(Path prefix, Path suffix) {
@@ -157,11 +157,11 @@ public class Path implements Serializable {
   private void init(String[] splitedPathArray) {
     StringContainer sc = new StringContainer(splitedPathArray, TsFileConstant.PATH_SEPARATOR);
     if (sc.size() <= 1) {
-      device = "";
-      fullPath = measurement = sc.toString();
+      devicePath = "";
+      fullPath = measurementPath = sc.toString();
     } else {
-      device = sc.getSubStringContainer(0, -2).toString();
-      measurement = sc.getSubString(-1);
+      devicePath = sc.getSubStringContainer(0, -2).toString();
+      measurementPath = sc.getSubString(-1);
       fullPath = sc.toString();
     }
   }
@@ -170,12 +170,12 @@ public class Path implements Serializable {
     return fullPath;
   }
 
-  public String getDevice() {
-    return device;
+  public String getDevicePath() {
+    return devicePath;
   }
 
-  public String getMeasurement() {
-    return measurement;
+  public String getMeasurementPath() {
+    return measurementPath;
   }
 
   @Override

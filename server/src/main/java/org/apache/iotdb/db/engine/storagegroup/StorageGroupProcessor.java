@@ -318,11 +318,11 @@ public class StorageGroupProcessor {
   /**
    * add a measurement into the schema.
    */
-  public void addMeasurement(String measurementId, TSDataType dataType, TSEncoding encoding,
+  public void addMeasurement(String measurementPath, TSDataType dataType, TSEncoding encoding,
       CompressionType compressor, Map<String, String> props) {
     writeLock();
     try {
-      schema.registerMeasurement(new MeasurementSchema(measurementId, dataType, encoding,
+      schema.registerMeasurement(new MeasurementSchema(measurementPath, dataType, encoding,
           compressor, props));
     } finally {
       writeUnlock();
@@ -333,7 +333,7 @@ public class StorageGroupProcessor {
     writeLock();
     try {
       // init map
-      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
       latestTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
       latestFlushedTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
 
@@ -349,7 +349,7 @@ public class StorageGroupProcessor {
     writeLock();
     try {
       // init map
-      Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevicePath());
       latestTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
       latestFlushedTimeForEachDevice.putIfAbsent(deviceId, Long.MIN_VALUE);
 
@@ -392,7 +392,7 @@ public class StorageGroupProcessor {
     }
 
     boolean result = tsFileProcessor.insertBatch(batchInsertPlan, indexes, results);
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevice());
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevicePath());
 
     // try to update the latest time of the device of this tsRecord
     if (result && latestTimeForEachDevice.get(deviceId) < batchInsertPlan.getMaxTime()) {
@@ -425,7 +425,7 @@ public class StorageGroupProcessor {
 
     // insert TsFileProcessor
     result = tsFileProcessor.insert(insertPlan);
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevice());
+    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
 
     // try to update the latest time of the device of this tsRecord
     if (result && latestTimeForEachDevice.get(deviceId) < insertPlan.getTime()) {
@@ -592,7 +592,7 @@ public class StorageGroupProcessor {
   }
 
   // TODO need a read lock, please consider the concurrency with flush manager threads.
-  public QueryDataSource query(String deviceId, String measurementId, QueryContext context,
+  public QueryDataSource query(String devicePath, String measurementPath, QueryContext context,
       JobFileManager filePathsManager) throws PathErrorException {
     insertLock.readLock().lock();
     mergeLock.readLock().lock();
@@ -600,14 +600,14 @@ public class StorageGroupProcessor {
       if (lruForSensorUsedInQuery.size() >= MAX_CACHE_SENSORS) {
         lruForSensorUsedInQuery.removeFirst();
       }
-      lruForSensorUsedInQuery.add(measurementId);
+      lruForSensorUsedInQuery.add(measurementPath);
     }
     try {
       List<TsFileResource> seqResources = getFileReSourceListForQuery(sequenceFileList,
-          deviceId, measurementId, context);
+          devicePath, measurementPath, context);
       List<TsFileResource> unseqResources = getFileReSourceListForQuery(unSequenceFileList,
-          deviceId, measurementId, context);
-      QueryDataSource dataSource =  new QueryDataSource(new Path(deviceId, measurementId), seqResources, unseqResources);
+          devicePath, measurementPath, context);
+      QueryDataSource dataSource =  new QueryDataSource(new Path(devicePath, measurementPath), seqResources, unseqResources);
       // used files should be added before mergeLock is unlocked, or they may be deleted by
       // running merge
       // is null only in tests
@@ -656,15 +656,16 @@ public class StorageGroupProcessor {
    * @return fill unsealed tsfile resources with memory data and ChunkMetadataList of data in disk
    */
   private List<TsFileResource> getFileReSourceListForQuery(List<TsFileResource> tsFileResources,
-      String device, String measurement, QueryContext context) throws PathErrorException {
+      String devicePath, String measurementPath, QueryContext context) throws PathErrorException {
 
-    MeasurementSchema mSchema = schema.getMeasurementSchema(MManager.getInstance().getMeasurementIdByPath(measurement));
+    MeasurementSchema mSchema = schema.getMeasurementSchema(
+        MManager.getInstance().getMeasurementIdByPath(devicePath, measurementPath));
     TSDataType dataType = mSchema.getType();
 
     List<TsFileResource> tsfileResourcesForQuery = new ArrayList<>();
     for (TsFileResource tsFileResource : tsFileResources) {
       // TODO: try filtering files if the query contains time filter
-      if (!tsFileResource.containsDevice(device)) {
+      if (!tsFileResource.containsDevice(devicePath)) {
         continue;
       }
       if (!tsFileResource.getStartTimeMap().isEmpty()) {
@@ -677,7 +678,7 @@ public class StorageGroupProcessor {
             Pair<ReadOnlyMemChunk, List<ChunkMetaData>> pair;
             pair = tsFileResource
                 .getUnsealedFileProcessor()
-                .query(device, measurement, dataType, mSchema.getProps(), context);
+                .query(devicePath, measurementPath, dataType, mSchema.getProps(), context);
             tsfileResourcesForQuery
                 .add(new TsFileResource(tsFileResource.getFile(),
                     tsFileResource.getStartTimeMap(),
@@ -694,13 +695,13 @@ public class StorageGroupProcessor {
 
   /**
    * Delete data whose timestamp <= 'timestamp' and belongs to the timeseries
-   * deviceId.measurementId.
+   * devicePath.measurementPath.
    *
-   * @param deviceId the deviceId of the timeseries to be deleted.
-   * @param measurementId the measurementId of the timeseries to be deleted.
+   * @param devicePath the devicePath of the timeseries to be deleted.
+   * @param measurementPath the measurementPath of the timeseries to be deleted.
    * @param timestamp the delete range is (0, timestamp].
    */
-  public void delete(String deviceId, String measurementId, long timestamp) throws IOException {
+  public void delete(String devicePath, String measurementPath, long timestamp) throws IOException {
     // TODO: how to avoid partial deletion?
     writeLock();
     mergeLock.writeLock().lock();
@@ -709,6 +710,7 @@ public class StorageGroupProcessor {
     List<ModificationFile> updatedModFiles = new ArrayList<>();
 
     try {
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(devicePath);
       Long lastUpdateTime = latestTimeForEachDevice.get(deviceId);
       // no tsfile data, the delete operation is invalid
       if (lastUpdateTime == null) {
@@ -720,15 +722,15 @@ public class StorageGroupProcessor {
       if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
         if (workSequenceTsFileProcessor != null) {
           workSequenceTsFileProcessor.getLogNode()
-              .write(new DeletePlan(timestamp, new Path(deviceId, measurementId)));
+              .write(new DeletePlan(timestamp, new Path(devicePath, measurementPath)));
         }
         if (workUnSequenceTsFileProcessor != null) {
           workUnSequenceTsFileProcessor.getLogNode()
-              .write(new DeletePlan(timestamp, new Path(deviceId, measurementId)));
+              .write(new DeletePlan(timestamp, new Path(devicePath, measurementPath)));
         }
       }
 
-      Path fullPath = new Path(deviceId, measurementId);
+      Path fullPath = new Path(devicePath, measurementPath);
       Deletion deletion = new Deletion(fullPath, versionController.nextVersion(), timestamp);
       if (mergingModification != null) {
         mergingModification.write(deletion);
@@ -753,11 +755,12 @@ public class StorageGroupProcessor {
 
   private void deleteDataInFiles(List<TsFileResource> tsFileResourceList, Deletion deletion,
       List<ModificationFile> updatedModFiles)
-      throws IOException {
-    String deviceId = deletion.getDevice();
+      throws IOException, PathErrorException {
+    String devicePath = deletion.getDevicePath();
     for (TsFileResource tsFileResource : tsFileResourceList) {
-      if (!tsFileResource.containsDevice(deviceId) ||
-          deletion.getTimestamp() < tsFileResource.getStartTimeMap().get(deviceId)) {
+      if (!tsFileResource.containsDevice(devicePath) ||
+          deletion.getTimestamp() < tsFileResource.getStartTimeMap().
+              get(MManager.getInstance().getDeviceIdByPath(devicePath))) {
         continue;
       }
 

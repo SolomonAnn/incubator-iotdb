@@ -32,7 +32,6 @@ import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 /**
@@ -344,21 +343,21 @@ public class MGraph implements Serializable {
     return mtree.getDeviceTypeByPath(path);
   }
 
-  public Long getDeviceIdByPath(String path) throws PathErrorException {
-    return mtree.getDeviceIdByPath(path);
+  public Long getDeviceIdByPath(String devicePath) throws PathErrorException {
+    return mtree.getDeviceIdByPath(devicePath);
   }
 
-  public Long getMeasurementIdByPath(String path) throws PathErrorException {
-    return mtree.getMeasurementIdByPath(path);
+  public Long getMeasurementIdByPath(String devicePath, String measurementPath) throws PathErrorException {
+    return mtree.getMeasurementIdByPath(devicePath, measurementPath);
   }
 
-  public String getDevicePathById(Long id) throws PathErrorException {
-    return mtree.getDevicePathById(id);
+  public String getDevicePathById(Long deviceId) throws PathErrorException {
+    return mtree.getDevicePathById(deviceId);
   }
 
-  public String getMeasurementPathById(Long id) throws PathErrorException {
-    return mtree.getMeasurementPathById(id);
-  }
+//  public String getMeasurementPathById(Long id) throws PathErrorException {
+//    return mtree.getMeasurementPathById(id);
+//  }
 
   /**
    * Get MeasurementSchema for given seriesPath. Notice: Path must be a complete Path from root to leaf

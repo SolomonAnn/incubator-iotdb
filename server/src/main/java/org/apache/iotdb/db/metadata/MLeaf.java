@@ -22,67 +22,32 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class MLeaf extends MNode {
-    private List<MNode> parents;
-    private MLeaf previousSibling;
-    private MLeaf nextSibling;
+    private long parentsCounter;
+    private Long id;
 
-    public MLeaf(String name, MNode parent, TSDataType dataType, TSEncoding encoding, CompressionType type) {
+    public MLeaf(String name, TSDataType dataType, TSEncoding encoding, CompressionType type, Long id) {
         super(name, dataType, encoding, type);
-        this.parents = new LinkedList<>();
-        this.addParent(parent);
-        this.previousSibling = null;
-        this.nextSibling = null;
+        this.parentsCounter = 0L;
+        this.id = id;
     }
 
-    public boolean hasParents() {
-        return !parents.isEmpty();
+    public long getParentsCounter() {
+        return parentsCounter;
     }
 
-    public boolean hasParent(MNode parent) {
-        return parents.contains(parent);
+    public void addParentsCounter() {
+        parentsCounter += 1L;
     }
 
-    public void addParent(MNode parent) {
-        if (!hasParent(parent)) {
-            parents.add(parent);
-        }
+    public Long getId() {
+        return id;
     }
 
-    public void deleteParent(MNode parent) {
-        parents.remove(parent);
-    }
-
-    public boolean hasPreviousSibling() {
-        return previousSibling != null;
-    }
-
-    public boolean hasNextSibling() {
-        return nextSibling != null;
-    }
-
-    public List<MNode> getParents() {
-        return parents;
-    }
-
-    public MLeaf getPreviousSibling() {
-        return previousSibling;
-    }
-
-    public MLeaf getNextSibling() {
-        return nextSibling;
-    }
-
-    public void setPreviousSibling(MLeaf previousSibling) {
-        this.previousSibling = previousSibling;
-    }
-
-    public void setNextSibling(MLeaf nextSibling) {
-        this.nextSibling = nextSibling;
+    public void setId(Long id) {
+        this.id = id;
     }
 }

@@ -66,11 +66,11 @@ public class TsFileMetadataUtils {
    */
   public static TsDeviceMetadata getTsDeviceMetaData(TsFileResource resource, Path seriesPath,
       TsFileMetaData fileMetaData) throws IOException {
-    if (!fileMetaData.getMeasurementSchema().containsKey(seriesPath.getMeasurement())) {
+    if (!fileMetaData.getMeasurementSchema().containsKey(seriesPath.getMeasurementPath())) {
       return null;
     } else {
       // get the index information of TsDeviceMetadata
-      TsDeviceMetadataIndex index = fileMetaData.getDeviceMetadataIndex(seriesPath.getDevice());
+      TsDeviceMetadataIndex index = fileMetaData.getDeviceMetadataIndex(seriesPath.getDevicePath());
       TsFileSequenceReader tsFileReader = FileReaderManager.getInstance().get(resource, true);
       // read TsDeviceMetadata from file
       return tsFileReader.readTsDeviceMetaData(index);
@@ -87,7 +87,7 @@ public class TsFileMetadataUtils {
     for (ChunkGroupMetaData chunkGroupMetaData : tsDeviceMetadata.getChunkGroupMetaDataList()) {
       List<ChunkMetaData> chunkMetaDataListInOneChunkGroup = chunkGroupMetaData
           .getChunkMetaDataList();
-      String deviceId = chunkGroupMetaData.getDeviceID();
+      String deviceId = chunkGroupMetaData.getDevicePath();
       for (ChunkMetaData chunkMetaData : chunkMetaDataListInOneChunkGroup) {
         if (sensorSet.isEmpty() || sensorSet.contains(chunkMetaData.getMeasurementUid())) {
           Path path = new Path(deviceId, chunkMetaData.getMeasurementUid());

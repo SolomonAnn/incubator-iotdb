@@ -31,7 +31,7 @@ public class ChunkGroupFooter {
 
   private static final byte MARKER = MetaMarker.CHUNK_GROUP_FOOTER;
 
-  private String deviceID;
+  private String devicePath;
 
   private long dataSize;
 
@@ -43,24 +43,24 @@ public class ChunkGroupFooter {
   /**
    * constructor of CHUNK_GROUP_FOOTER.
    *
-   * @param deviceID device ID
+   * @param devicePath device Path
    * @param dataSize data size
    * @param numberOfChunks number of chunks
    */
-  public ChunkGroupFooter(String deviceID, long dataSize, int numberOfChunks) {
-    this.deviceID = deviceID;
+  public ChunkGroupFooter(String devicePath, long dataSize, int numberOfChunks) {
+    this.devicePath = devicePath;
     this.dataSize = dataSize;
     this.numberOfChunks = numberOfChunks;
     this.serializedSize =
-        Byte.BYTES + Integer.BYTES + deviceID.length() + Long.BYTES + Integer.BYTES;
+        Byte.BYTES + Integer.BYTES + devicePath.length() + Long.BYTES + Integer.BYTES;
   }
 
-  public static int getSerializedSize(String deviceID) {
-    return Byte.BYTES + Integer.BYTES + getSerializedSize(deviceID.length());
+  public static int getSerializedSize(String devicePath) {
+    return Byte.BYTES + Integer.BYTES + getSerializedSize(devicePath.length());
   }
 
-  private static int getSerializedSize(int deviceIdLength) {
-    return deviceIdLength + Long.BYTES + Integer.BYTES;
+  private static int getSerializedSize(int devicePathLength) {
+    return devicePathLength + Long.BYTES + Integer.BYTES;
   }
 
   /**
@@ -77,10 +77,10 @@ public class ChunkGroupFooter {
       }
     }
 
-    String deviceID = ReadWriteIOUtils.readString(inputStream);
+    String devicePath = ReadWriteIOUtils.readString(inputStream);
     long dataSize = ReadWriteIOUtils.readLong(inputStream);
     int numOfChunks = ReadWriteIOUtils.readInt(inputStream);
-    return new ChunkGroupFooter(deviceID, dataSize, numOfChunks);
+    return new ChunkGroupFooter(devicePath, dataSize, numOfChunks);
   }
 
   /**
@@ -103,18 +103,18 @@ public class ChunkGroupFooter {
     buffer = ByteBuffer.allocate(getSerializedSize(size));
     ReadWriteIOUtils.readAsPossible(input, offsetVar, buffer);
     buffer.flip();
-    String deviceID = ReadWriteIOUtils.readStringWithoutLength(buffer, size);
+    String devicePath = ReadWriteIOUtils.readStringWithoutLength(buffer, size);
     long dataSize = ReadWriteIOUtils.readLong(buffer);
     int numOfChunks = ReadWriteIOUtils.readInt(buffer);
-    return new ChunkGroupFooter(deviceID, dataSize, numOfChunks);
+    return new ChunkGroupFooter(devicePath, dataSize, numOfChunks);
   }
 
   public int getSerializedSize() {
     return serializedSize;
   }
 
-  public String getDeviceID() {
-    return deviceID;
+  public String getDevicePath() {
+    return devicePath;
   }
 
   public long getDataSize() {
@@ -139,7 +139,7 @@ public class ChunkGroupFooter {
   public int serializeTo(OutputStream outputStream) throws IOException {
     int length = 0;
     length += ReadWriteIOUtils.write(MARKER, outputStream);
-    length += ReadWriteIOUtils.write(deviceID, outputStream);
+    length += ReadWriteIOUtils.write(devicePath, outputStream);
     length += ReadWriteIOUtils.write(dataSize, outputStream);
     length += ReadWriteIOUtils.write(numberOfChunks, outputStream);
     return length;
@@ -147,7 +147,7 @@ public class ChunkGroupFooter {
 
   @Override
   public String toString() {
-    return "CHUNK_GROUP_FOOTER{" + "deviceID='" + deviceID + '\'' + ", dataSize=" + dataSize
+    return "CHUNK_GROUP_FOOTER{" + "devicePath='" + devicePath + '\'' + ", dataSize=" + dataSize
         + ", numberOfChunks="
         + numberOfChunks + ", serializedSize=" + serializedSize + '}';
   }
