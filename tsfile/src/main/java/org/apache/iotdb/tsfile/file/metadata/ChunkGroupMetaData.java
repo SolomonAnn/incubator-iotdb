@@ -103,14 +103,9 @@ public class ChunkGroupMetaData {
     chunkGroupMetaData.version = ReadWriteIOUtils.readLong(inputStream);
 
     int size = ReadWriteIOUtils.readInt(inputStream);
-<<<<<<< HEAD
-    chunkGroupMetaData.serializedSize = Integer.BYTES + chunkGroupMetaData.devicePath.length()
-        + Integer.BYTES + Long.BYTES + Long.BYTES + Long.BYTES;
-=======
     chunkGroupMetaData.serializedSize = Integer.BYTES
-            + chunkGroupMetaData.deviceID.getBytes(TSFileConfig.STRING_ENCODING).length
+            + chunkGroupMetaData.devicePath.getBytes(TSFileConfig.STRING_ENCODING).length
             + Integer.BYTES + Long.BYTES + Long.BYTES + Long.BYTES;
->>>>>>> upstream/master
 
     List<ChunkMetaData> chunkMetaDataList = new ArrayList<>();
 
@@ -140,11 +135,7 @@ public class ChunkGroupMetaData {
 
     int size = ReadWriteIOUtils.readInt(buffer);
 
-<<<<<<< HEAD
-    chunkGroupMetaData.serializedSize = Integer.BYTES + chunkGroupMetaData.devicePath.length()
-=======
-    chunkGroupMetaData.serializedSize = Integer.BYTES + chunkGroupMetaData.deviceID.getBytes(TSFileConfig.STRING_ENCODING).length
->>>>>>> upstream/master
+    chunkGroupMetaData.serializedSize = Integer.BYTES + chunkGroupMetaData.devicePath.getBytes(TSFileConfig.STRING_ENCODING).length
         + Integer.BYTES + Long.BYTES + Long.BYTES + Long.BYTES;
 
     List<ChunkMetaData> chunkMetaDataList = new ArrayList<>();

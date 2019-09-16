@@ -59,7 +59,7 @@ public abstract class ReaderTestHelper {
     EnvironmentUtils.cleanDir(systemDir);
   }
 
-  abstract protected void insertData() throws IOException;
+  abstract protected void insertData() throws IOException, PathErrorException;
 
   protected void insertOneRecord(long time, int num) throws PathErrorException {
     TSRecord record = new TSRecord(time, devicePath);

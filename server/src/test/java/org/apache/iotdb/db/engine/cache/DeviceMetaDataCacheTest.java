@@ -45,14 +45,14 @@ public class DeviceMetaDataCacheTest {
   private QueryContext context = EnvironmentUtils.TEST_QUERY_CONTEXT;
 
   private String storageGroup = "root.vehicle";
-  private String deviceId0 = "root.vehicle.d0";
-  private String measurementId0 = "s0";
-  private String measurementId1 = "s1";
-  private String measurementId2 = "s2";
-  private String measurementId3 = "s3";
-  private String measurementId4 = "s4";
-  private String measurementId5 = "s5";
-  private String measurementId100 = "s100";
+  private String devicePath0 = "root.vehicle.d0";
+  private String measurementPath0 = "s0";
+  private String measurementPath1 = "s1";
+  private String measurementPath2 = "s2";
+  private String measurementPath3 = "s3";
+  private String measurementPath4 = "s4";
+  private String measurementPath5 = "s5";
+  private String measurementPath100 = "s100";
   private StorageGroupProcessor storageGroupProcessor;
   private String systemDir = "data/info";
 
@@ -76,13 +76,13 @@ public class DeviceMetaDataCacheTest {
   }
 
   private void insertOneRecord(long time, int num) throws PathErrorException {
-    TSRecord record = new TSRecord(time, deviceId0);
-    record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId0, String.valueOf(num)));
-    record.addTuple(DataPoint.getDataPoint(TSDataType.INT64, measurementId1, String.valueOf(num)));
-    record.addTuple(DataPoint.getDataPoint(TSDataType.FLOAT, measurementId2, String.valueOf(num)));
-    record.addTuple(DataPoint.getDataPoint(TSDataType.DOUBLE, measurementId3, String.valueOf(num)));
-    record.addTuple(DataPoint.getDataPoint(TSDataType.BOOLEAN, measurementId4, "True"));
-//    record.addTuple(DataPoint.getDataPoint(TSDataType.TEXT, measurementId5, String.valueOf(num)));
+    TSRecord record = new TSRecord(time, devicePath0);
+    record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath0, String.valueOf(num)));
+    record.addTuple(DataPoint.getDataPoint(TSDataType.INT64, measurementPath1, String.valueOf(num)));
+    record.addTuple(DataPoint.getDataPoint(TSDataType.FLOAT, measurementPath2, String.valueOf(num)));
+    record.addTuple(DataPoint.getDataPoint(TSDataType.DOUBLE, measurementPath3, String.valueOf(num)));
+    record.addTuple(DataPoint.getDataPoint(TSDataType.BOOLEAN, measurementPath4, "True"));
+//    record.addTuple(DataPoint.getDataPoint(TSDataType.TEXT, measurementPath5, String.valueOf(num)));
     storageGroupProcessor.insert(new InsertPlan(record));
   }
 
@@ -117,7 +117,7 @@ public class DeviceMetaDataCacheTest {
   public void test1() throws IOException, PathErrorException {
     IoTDBDescriptor.getInstance().getConfig().setMetaDataCacheEnable(false);
     QueryDataSource queryDataSource = storageGroupProcessor
-        .query(deviceId0, measurementId5, context, null);
+        .query(devicePath0, measurementPath5, context, null);
 
     List<TsFileResource> seqResources = queryDataSource.getSeqResources();
     List<TsFileResource> unseqResources = queryDataSource.getUnseqResources();
@@ -131,7 +131,7 @@ public class DeviceMetaDataCacheTest {
     Assert.assertFalse(unseqResources.get(3).isClosed());
 
     List<ChunkMetaData> metaDataList = DeviceMetaDataCache.getInstance()
-        .get(seqResources.get(0), new Path(deviceId0, measurementId5));
+        .get(seqResources.get(0), new Path(devicePath0, measurementPath5));
     Assert.assertEquals(0, metaDataList.size());
   }
 
@@ -139,7 +139,7 @@ public class DeviceMetaDataCacheTest {
   public void test2() throws IOException, PathErrorException {
     IoTDBDescriptor.getInstance().getConfig().setMetaDataCacheEnable(true);
     QueryDataSource queryDataSource = storageGroupProcessor
-        .query(deviceId0, measurementId5, context, null);
+        .query(devicePath0, measurementPath5, context, null);
 
     List<TsFileResource> seqResources = queryDataSource.getSeqResources();
     List<TsFileResource> unseqResources = queryDataSource.getUnseqResources();
@@ -153,7 +153,7 @@ public class DeviceMetaDataCacheTest {
     Assert.assertFalse(unseqResources.get(3).isClosed());
 
     List<ChunkMetaData> metaDataList = DeviceMetaDataCache.getInstance()
-        .get(seqResources.get(0), new Path(deviceId0, measurementId5));
+        .get(seqResources.get(0), new Path(devicePath0, measurementPath5));
     Assert.assertEquals(0, metaDataList.size());
   }
 

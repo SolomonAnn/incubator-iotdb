@@ -30,30 +30,46 @@ public class JDBCExample {
   public static void main(String[] args) throws ClassNotFoundException, SQLException {
     Class.forName("org.apache.iotdb.jdbc.IoTDBDriver");
     try (Connection connection = DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
-        Statement statement = connection.createStatement()) {
-      statement.execute("SET STORAGE GROUP TO root.sg1");
+         Statement statement = connection.createStatement()) {
+      for (int i = 1; i <= 100; i++) {
+        statement.execute("SET STORAGE GROUP TO root.sg" + i);
+      }
 
       long startTime, endTime;
       startTime = System.currentTimeMillis();
-      for (int i = 1; i <= 200_000; i++) {
-        statement.execute("CREATE TIMESERIES root.sg1.d" + i + ".s1 WITH DATATYPE=INT64, ENCODING=RLE");
+      for (int i = 1; i <= 100; i++) {
+        for (int j = 1; j <= 400; j++) {
+          for (int k = 1; k <= 5; k++) {
+            statement.execute("CREATE TIMESERIES root.sg" + i + ".d" + j + ".s" + k + " WITH DATATYPE=INT64, ENCODING=RLE");
+          }
+        }
       }
       endTime = System.currentTimeMillis();
       System.out.println("Time Consuming of CREATE TIMESERIES: " + (endTime - startTime) + " ms");
 
-//      startTime = System.currentTimeMillis();
-//      for (int i = 200_001; i <= 200_011; i++) {
-//        statement.execute("CREATE TIMESERIES root.sg1.d" + i + ".s1 WITH DATATYPE=INT64, ENCODING=RLE");
-//      }
-//      endTime = System.currentTimeMillis();
-//      System.out.println("Time Consuming of CREATE extra TIMESERIES: " + (endTime - startTime) + " ms");
-
       startTime = System.currentTimeMillis();
-      for (int i = 1; i <= 200_000; i++) {
-        for (int j = 1; j <= 100; j++) {
-            statement.addBatch("insert into root.sg1.d" + i + "(timestamp, s1) values("+ j + "," + 1 + ")");
+      String insertStatement1, insertStatement2, insertStatement3;
+      for (int i = 1; i <= 100; i++) {
+        insertStatement3 = "insert into root.sg" + i;
+        for (int j = 1; j <= 400; j++) {
+          insertStatement2 = insertStatement3;
+          insertStatement2 += ".d" + j + "(timestamp";
+          for (int k = 1; k <= 5; k++) {
+            insertStatement2 += ", s" + k;
+          }
+          insertStatement2 += ") values(";
+          for (int k = 1; k <= 10; k++) {
+            insertStatement1 = insertStatement2;
+            insertStatement1 += k;
+            for (int l = 1; l <= 5; l++) {
+              insertStatement1 += ", " + 1;
+            }
+            insertStatement1 += ")";
+//            System.out.println(insertStatement1);
+            statement.addBatch(insertStatement1);
             statement.executeBatch();
             statement.clearBatch();
+          }
         }
       }
       endTime = System.currentTimeMillis();
