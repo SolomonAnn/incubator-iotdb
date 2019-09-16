@@ -99,7 +99,7 @@ public class TsFileSequenceRead {
         case MetaMarker.CHUNK_GROUP_FOOTER:
           System.out.println("Chunk Group Footer position: " + reader.position());
           ChunkGroupFooter chunkGroupFooter = reader.readChunkGroupFooter();
-          System.out.println("device: " + chunkGroupFooter.getDeviceID());
+          System.out.println("device: " + chunkGroupFooter.getDevicePath());
           break;
         default:
           MetaMarker.handleUnexpectedMarker(marker);
@@ -114,7 +114,7 @@ public class TsFileSequenceRead {
       for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
         System.out.println(String
             .format("\t[Device]File Offset: %d, Device %s, Number of Chunk Groups %d",
-                index.getOffset(), chunkGroupMetaData.getDeviceID(),
+                index.getOffset(), chunkGroupMetaData.getDevicePath(),
                 chunkGroupMetaDataList.size()));
 
         for (ChunkMetaData chunkMetadata : chunkGroupMetaData.getChunkMetaDataList()) {

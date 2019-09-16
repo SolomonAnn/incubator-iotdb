@@ -146,7 +146,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
             }
             queryDataSet = queryDataSets.remove(queryDataSets.size() - 1)
           }
-          device_name = queryDataSet.getPaths.get(0).getDevice
+          device_name = queryDataSet.getPaths.get(0).getDevicePath
           true
         }
 

@@ -980,14 +980,14 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     InsertPlan plan = (InsertPlan) idStmtMap.computeIfAbsent(stmtId, k -> new InsertPlan());
 
     // the old parameter will be used if new parameter is not set
-    if (req.isSetDevicePath()) {
-      plan.setDevicePath(req.getDevicePath());
+    if (req.isSetDeviceId()) {
+      plan.setDevicePath(req.getDeviceId());
     }
     if (req.isSetTimestamp()) {
       plan.setTime(req.getTimestamp());
     }
-    if (req.isSetMeasurementPaths()) {
-      plan.setMeasurementPaths(req.getMeasurementPaths().toArray(new String[0]));
+    if (req.isSetMeasurements()) {
+      plan.setMeasurementPaths(req.getMeasurements().toArray(new String[0]));
     }
     if (req.isSetValues()) {
       plan.setValues(req.getValues().toArray(new String[0]));
@@ -996,30 +996,30 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     try {
       return executeUpdateStatement(plan);
     } catch (Exception e) {
-      logger.info("meet error while executing an insertion into {}", req.getDevicePath(), e);
+      logger.info("meet error while executing an insertion into {}", req.getDeviceId(), e);
       return getTSExecuteStatementResp(getStatus(TSStatusType.EXECUTE_STATEMENT_ERROR, e.getMessage()));
     }
   }
 
-//  @Override
-//  public TSRPCResp insertRow(TSInsertionReq req) throws TException {
-//    if (!checkLogin()) {
-//      logger.info(INFO_NOT_LOGIN, IoTDBConstant.GLOBAL_DB_NAME);
-//      return new TSRPCResp(getStatus(TSStatusType.NOT_LOGIN_ERROR));
-//    }
-//
-//    InsertPlan plan = new InsertPlan();
-//    plan.setDevice(req.getDeviceId());
-//    plan.setTime(req.getTimestamp());
-//    plan.setMeasurements(req.getMeasurements().toArray(new String[0]));
-//    plan.setValues(req.getValues().toArray(new String[0]));
-//
-//    TS_Status status = checkAuthority(plan);
-//    if (status != null) {
-//      return new TSRPCResp(status);
-//    }
-//    return new TSRPCResp(executePlan(plan));
-//  }
+  @Override
+  public TSRPCResp insertRow(TSInsertReq req) throws TException {
+    if (!checkLogin()) {
+      logger.info(INFO_NOT_LOGIN, IoTDBConstant.GLOBAL_DB_NAME);
+      return new TSRPCResp(getStatus(TSStatusType.NOT_LOGIN_ERROR));
+    }
+
+    InsertPlan plan = new InsertPlan();
+    plan.setDevicePath(req.getDeviceId());
+    plan.setTime(req.getTimestamp());
+    plan.setMeasurementPaths(req.getMeasurements().toArray(new String[0]));
+    plan.setValues(req.getValues().toArray(new String[0]));
+
+    TS_Status status = checkAuthority(plan);
+    if (status != null) {
+      return new TSRPCResp(status);
+    }
+    return new TSRPCResp(executePlan(plan));
+  }
 
   @Override
   public TSExecuteBatchStatementResp insertBatch(TSBatchInsertionReq req) {

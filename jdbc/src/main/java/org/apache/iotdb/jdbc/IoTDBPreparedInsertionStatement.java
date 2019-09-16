@@ -46,8 +46,8 @@ public class IoTDBPreparedInsertionStatement extends IoTDBPreparedStatement {
 
     try {
       TSExecuteStatementResp resp = client.insert(req);
-      req.unsetDevicePath();
-      req.unsetMeasurementPaths();
+      req.unsetDeviceId();
+      req.unsetMeasurements();
       req.unsetTimestamp();
       req.unsetValues();
       return resp.getStatus().getStatusType().getCode() == TSStatusType.SUCCESS_STATUS.getStatusCode();
@@ -60,12 +60,12 @@ public class IoTDBPreparedInsertionStatement extends IoTDBPreparedStatement {
     req.setTimestamp(timestamp);
   }
 
-  public void setDevicePath(String devicePath) {
-    req.setDevicePath(devicePath);
+  public void setDeviceId(String devicePath) {
+    req.setDeviceId(devicePath);
   }
 
   public void setMeasurements(List<String> measurements) {
-    req.setMeasurementPaths(measurements);
+    req.setMeasurements(measurements);
   }
 
   public void setValues(List<String> values) {

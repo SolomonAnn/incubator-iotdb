@@ -92,7 +92,7 @@ public class IoTDBPreparedStmtIT {
         IoTDBPreparedInsertionStatement statement =
             (IoTDBPreparedInsertionStatement) connection.prepareStatement("INSERT");
         Statement queryStmt = connection.createStatement()){
-      statement.setDevicePath("root.device1");
+      statement.setDeviceId("root.device1");
       String[] measurements = new String[5];
       for (int i = 0; i < 5; i++) {
         measurements[i] = "sensor" + i;
@@ -143,7 +143,7 @@ public class IoTDBPreparedStmtIT {
       }
       String[] values = new String[5];
       for (int i = 1000000; i <= 2000000; i++) {
-        statement.setDevicePath("root.device1");
+        statement.setDeviceId("root.device1");
         statement.setMeasurements(Arrays.asList(measurements));
         statement.setTimestamp(i);
         for (int j = 0; j < 5; j++) {
@@ -161,7 +161,7 @@ public class IoTDBPreparedStmtIT {
         IoTDBPreparedInsertionStatement statement = (IoTDBPreparedInsertionStatement) connection.prepareStatement("INSERT")) {
       // ideal usage, only value and time are updated
       long startTime = System.currentTimeMillis();
-      statement.setDevicePath("root.device2");
+      statement.setDeviceId("root.device2");
       String[] measurements = new String[5];
       for (int i = 0; i < 5; i++) {
         measurements[i] = "sensor" + i;
