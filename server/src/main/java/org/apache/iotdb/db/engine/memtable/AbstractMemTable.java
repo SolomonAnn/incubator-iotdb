@@ -62,8 +62,8 @@ public abstract class AbstractMemTable implements IMemTable {
    *
    * @return true if seriesPath is within this memtable
    */
-  private boolean checkPath(String deviceId, String measurement) {
-    return memTableMap.containsKey(deviceId) && memTableMap.get(deviceId).containsKey(measurement);
+  private boolean checkPath(String devicePath, String measurementPath) {
+    return memTableMap.containsKey(devicePath) && memTableMap.get(devicePath).containsKey(measurementPath);
   }
 
   private IWritableMemChunk createIfNotExistAndGet(String devicePath, String measurementPath,
@@ -102,9 +102,9 @@ public abstract class AbstractMemTable implements IMemTable {
 
 
   @Override
-  public void write(String device, String measurement, TSDataType dataType, long insertTime,
+  public void write(String devicePath, String measurementPath, TSDataType dataType, long insertTime,
       String insertValue) throws PathErrorException {
-    IWritableMemChunk memSeries = createIfNotExistAndGet(device, measurement, dataType);
+    IWritableMemChunk memSeries = createIfNotExistAndGet(devicePath, measurementPath, dataType);
     memSeries.write(insertTime, insertValue);
   }
 

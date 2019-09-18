@@ -355,9 +355,9 @@ public class MGraph implements Serializable {
     return mtree.getDevicePathById(deviceId);
   }
 
-//  public String getMeasurementPathById(Long id) throws PathErrorException {
-//    return mtree.getMeasurementPathById(id);
-//  }
+  public String getMeasurementPathById(String devicePath, Long measurementId) throws PathErrorException {
+    return mtree.getMeasurementPathById(devicePath, measurementId);
+  }
 
   /**
    * Get MeasurementSchema for given seriesPath. Notice: Path must be a complete Path from root to leaf

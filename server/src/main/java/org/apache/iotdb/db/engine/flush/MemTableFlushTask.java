@@ -72,21 +72,18 @@ public class MemTableFlushTask {
   /**
    * the function for flushing memtable.
    */
-  public void syncFlushMemTable() throws ExecutionException, InterruptedException {
+  public void syncFlushMemTable() throws ExecutionException, InterruptedException, PathErrorException {
     long start = System.currentTimeMillis();
     long sortTime = 0;
+    String devicePath;
     for (Long deviceId : memTable.getMemTableMap().keySet()) {
-      try {
-        String device = MManager.getInstance().getDevicePathById(deviceId);
-        encodingTaskQueue.add(new StartFlushGroupIOTask(device));
-      } catch (PathErrorException e) {
-        logger.error("Device id %d is not right.", deviceId);
-      }
-
+      devicePath = MManager.getInstance().getDevicePathById(deviceId);
+      encodingTaskQueue.add(new StartFlushGroupIOTask(devicePath));
       for (Long measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
         long startTime = System.currentTimeMillis();
         IWritableMemChunk series = memTable.getMemTableMap().get(deviceId).get(measurementId);
-        MeasurementSchema desc = schema.getMeasurementSchema(measurementId);
+        MeasurementSchema desc = schema.getMeasurementSchema(
+            MManager.getInstance().getMeasurementPathById(devicePath, measurementId));
         TVList tvList = series.getSortedTVList();
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));

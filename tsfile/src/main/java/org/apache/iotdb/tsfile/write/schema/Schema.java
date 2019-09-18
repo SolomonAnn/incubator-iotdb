@@ -35,7 +35,7 @@ import java.util.Map;
 public class Schema {
 
   /**
-   * the key is the measurementId.
+   * the key is the measurementPath.
    * By default, use the LinkedHashMap to store the order of insertion
    */
   private Map<String, MeasurementSchema> measurementSchemaMap;
@@ -86,19 +86,19 @@ public class Schema {
 
   /**
    * Create a row batch to write aligned data
-   * @param deviceId the name of the device specified to be written in
+   * @param devicePath the name of the device specified to be written in
    * @param maxBatchSize max size of rows in batch
    */
-  public RowBatch createRowBatch(String deviceId, int maxBatchSize) {
-    return new RowBatch(deviceId, new ArrayList<>(measurementSchemaMap.values()), maxBatchSize);
+  public RowBatch createRowBatch(String devicePath, int maxBatchSize) {
+    return new RowBatch(devicePath, new ArrayList<>(measurementSchemaMap.values()), maxBatchSize);
   }
 
   /**
    * Get the data type fo a measurement specified by measurementId.
-   * @param measurementId the name of the measurement being queried.
+   * @param measurementPath the name of the measurement being queried.
    */
-  public TSDataType getMeasurementDataType(String measurementId) {
-    MeasurementSchema measurement = this.measurementSchemaMap.get(measurementId);
+  public TSDataType getMeasurementDataType(String measurementPath) {
+    MeasurementSchema measurement = this.measurementSchemaMap.get(measurementPath);
     if (measurement == null) {
       return null;
     }
@@ -106,8 +106,8 @@ public class Schema {
 
   }
 
-  public MeasurementSchema getMeasurementSchema(Long measurementId) {
-    return measurementSchemaMap.get(measurementId);
+  public MeasurementSchema getMeasurementSchema(String measurementPath) {
+    return measurementSchemaMap.get(measurementPath);
   }
 
   public Map<String, MeasurementSchema> getMeasurementSchemaMap() {
@@ -147,10 +147,10 @@ public class Schema {
   }
 
   /**
-   * check if this schema contains a measurement named measurementId.
+   * check if this schema contains a measurement named measurementPath.
    */
-  public boolean hasMeasurement(String measurementId) {
-    return measurementSchemaMap.containsKey(measurementId);
+  public boolean hasMeasurement(String measurementPath) {
+    return measurementSchemaMap.containsKey(measurementPath);
   }
 
 }

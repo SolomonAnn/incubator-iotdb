@@ -49,6 +49,7 @@ public class JDBCExample {
 
       startTime = System.currentTimeMillis();
       String insertStatement1, insertStatement2, insertStatement3;
+      int a = 0;
       for (int i = 1; i <= 100; i++) {
         insertStatement3 = "insert into root.sg" + i;
         for (int j = 1; j <= 400; j++) {
@@ -58,7 +59,7 @@ public class JDBCExample {
             insertStatement2 += ", s" + k;
           }
           insertStatement2 += ") values(";
-          for (int k = 1; k <= 10; k++) {
+          for (int k = 1; k <= 1000; k++) {
             insertStatement1 = insertStatement2;
             insertStatement1 += k;
             for (int l = 1; l <= 5; l++) {
@@ -66,6 +67,10 @@ public class JDBCExample {
             }
             insertStatement1 += ")";
 //            System.out.println(insertStatement1);
+            a += 1;
+            if (a % 10_000 == 0) {
+              System.out.println(a);
+            }
             statement.addBatch(insertStatement1);
             statement.executeBatch();
             statement.clearBatch();

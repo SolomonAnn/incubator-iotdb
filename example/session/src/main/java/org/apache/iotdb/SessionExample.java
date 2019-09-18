@@ -49,7 +49,7 @@ public class SessionExample {
   }
 
   private static void insert() throws IoTDBSessionException {
-    String deviceId = "root.sg1.d1";
+    String devicePath = "root.sg1.d1";
     List<String> measurements = new ArrayList<>();
     measurements.add("s1");
     measurements.add("s2");
@@ -59,7 +59,7 @@ public class SessionExample {
       values.add("1");
       values.add("2");
       values.add("3");
-      session.insert(deviceId, time, measurements, values);
+      session.insert(devicePath, time, measurements, values);
     }
   }
 

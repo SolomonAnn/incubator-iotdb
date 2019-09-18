@@ -1224,14 +1224,14 @@ public class MManager {
     }
   }
 
-//  public String getMeasurementPathById(Long measurementId) throws PathErrorException {
-//    lock.readLock().lock();
-//    try {
-//      return mgraph.getMeasurementPathById(measurementId);
-//    } finally {
-//      lock.readLock().unlock();
-//    }
-//  }
+  public String getMeasurementPathById(String devicePath, Long measurementId) throws PathErrorException {
+    lock.readLock().lock();
+    try {
+      return mgraph.getMeasurementPathById(devicePath, measurementId);
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
 
   /**
    * Only for test

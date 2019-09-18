@@ -136,6 +136,7 @@ public class TsFileProcessor {
    * @return succeed or fail
    */
   public boolean insert(InsertPlan insertPlan) throws PathErrorException {
+    Long deviceId;
 
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
@@ -150,7 +151,7 @@ public class TsFileProcessor {
       }
     }
 
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
+    deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
     // update start time of this memtable
     tsFileResource.updateStartTime(deviceId, insertPlan.getTime());
     //for sequence tsfile, we update the endTime only when the file is prepared to be closed.
@@ -397,7 +398,7 @@ public class TsFileProcessor {
    * Take the first MemTable from the flushingMemTables and flush it. Called by a flush thread of
    * the flush manager pool
    */
-  public void flushOneMemTable(){
+  public void flushOneMemTable() {
     IMemTable memTableToFlush;
     memTableToFlush = flushingMemTables.getFirst();
 
@@ -410,7 +411,7 @@ public class TsFileProcessor {
       try {
         writer.mark();
         flushTask.syncFlushMemTable();
-      } catch (ExecutionException | InterruptedException | IOException e) {
+      } catch (ExecutionException | InterruptedException | IOException | PathErrorException e) {
         logger.error("meet error when flushing a memtable, change system mode to read-only", e);
         IoTDBDescriptor.getInstance().getConfig().setReadOnly(true);
         try {

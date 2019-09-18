@@ -87,10 +87,10 @@ public class TsFileMetadataUtils {
     for (ChunkGroupMetaData chunkGroupMetaData : tsDeviceMetadata.getChunkGroupMetaDataList()) {
       List<ChunkMetaData> chunkMetaDataListInOneChunkGroup = chunkGroupMetaData
           .getChunkMetaDataList();
-      String deviceId = chunkGroupMetaData.getDevicePath();
+      String devicePath = chunkGroupMetaData.getDevicePath();
       for (ChunkMetaData chunkMetaData : chunkMetaDataListInOneChunkGroup) {
         if (sensorSet.isEmpty() || sensorSet.contains(chunkMetaData.getMeasurementUid())) {
-          Path path = new Path(deviceId, chunkMetaData.getMeasurementUid());
+          Path path = new Path(devicePath, chunkMetaData.getMeasurementUid());
           pathToChunkMetaDataList.putIfAbsent(path, new ArrayList<>());
           chunkMetaData.setVersion(chunkGroupMetaData.getVersion());
           pathToChunkMetaDataList.get(path).add(chunkMetaData);

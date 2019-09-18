@@ -417,6 +417,7 @@ public class StorageGroupProcessor {
   private boolean insertToTsFileProcessor(InsertPlan insertPlan, boolean sequence) throws PathErrorException {
     TsFileProcessor tsFileProcessor;
     boolean result;
+    Long deviceId;
 
     tsFileProcessor = getOrCreateTsFileProcessor(sequence);
 
@@ -426,7 +427,7 @@ public class StorageGroupProcessor {
 
     // insert TsFileProcessor
     result = tsFileProcessor.insert(insertPlan);
-    Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
+    deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
 
     // try to update the latest time of the device of this tsRecord
     if (result && latestTimeForEachDevice.get(deviceId) < insertPlan.getTime()) {
@@ -658,8 +659,7 @@ public class StorageGroupProcessor {
   private List<TsFileResource> getFileReSourceListForQuery(List<TsFileResource> tsFileResources,
       String devicePath, String measurementPath, QueryContext context) throws PathErrorException {
 
-    MeasurementSchema mSchema = schema.getMeasurementSchema(
-        MManager.getInstance().getMeasurementIdByPath(devicePath, measurementPath));
+    MeasurementSchema mSchema = schema.getMeasurementSchema(measurementPath);
     TSDataType dataType = mSchema.getType();
 
     List<TsFileResource> tsfileResourcesForQuery = new ArrayList<>();

@@ -185,15 +185,16 @@ public class MTree implements Serializable {
     }
   }
 
-//  public String getMeasurementPathById(Long measurementId) throws PathErrorException {
-//    for (Map.Entry<String, MLeaf> entry : measurementPathToNode.entrySet()) {
-//      if (measurementId.equals(entry.getValue().getId())) {
-//        return entry.getKey();
-//      }
-//    }
-//    throw new PathErrorException(
-//        String.format("Measurement id %d is not right.", measurementId));
-//  }
+  public String getMeasurementPathById(String devicePath, Long measurementId) throws PathErrorException {
+    String storageGroupPath = getStorageGroupNameByPath(devicePath);
+    for (Map.Entry<String, MLeaf> entry : measurementPathToNodeForEachStorageGroup.get(storageGroupPath).entrySet()) {
+      if (measurementId.equals(entry.getValue().getId())) {
+        return entry.getKey();
+      }
+    }
+    throw new PathErrorException(
+        String.format("Measurement id %d is not right.", measurementId));
+  }
 
   /**
    * function for checking whether the given path exists.
