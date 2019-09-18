@@ -18,12 +18,7 @@
 // */
 //package org.apache.iotdb.db.sync.receiver;
 //
-//import java.io.BufferedReader;
-//import java.io.File;
-//import java.io.FileInputStream;
-//import java.io.FileNotFoundException;
-//import java.io.FileOutputStream;
-//import java.io.IOException;
+//import java.io.*;
 //import java.math.BigInteger;
 //import java.nio.ByteBuffer;
 //import java.nio.channels.FileChannel;
@@ -547,7 +542,7 @@
 //          for (int i = 0; i < fields.size(); i++) {
 //            Field field = fields.get(i);
 //            if (!field.isNull()) {
-//              measurementList.add(paths.get(i).getMeasurement());
+//              measurementList.add(paths.get(i).getMeasurementPath());
 //              if (fields.get(i).getDataType() == TSDataType.TEXT) {
 //                insertValues.add(String.format("'%s'", field.toString()));
 //              } else {
@@ -673,7 +668,7 @@
 //        Field field = fields.get(i);
 //        String[] measurementList = new String[1];
 //        if (!field.isNull()) {
-//          measurementList[0] = paths.get(i).getMeasurement();
+//          measurementList[0] = paths.get(i).getMeasurementPath();
 //          InsertPlan insertPlan = new InsertPlan(deviceID, record.getTimestamp(),
 //              measurementList, new String[]{field.getDataType() == TSDataType.TEXT ? String.format("'%s'", field.toString())
 //              : field.toString()});

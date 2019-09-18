@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.io.FileUtils;
-import org.apache.iotdb.db.engine.fileSystem.FileFactory;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
@@ -37,6 +36,7 @@ import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Field;
@@ -78,7 +78,7 @@ public class SeqTsFileRecoverTest {
 
   @Before
   public void setup() throws IOException, WriteProcessException {
-    tsF = FileFactory.INSTANCE.getFile("temp", "test.ts");
+    tsF = SystemFileFactory.INSTANCE.getFile("temp", "test.ts");
     tsF.getParentFile().mkdirs();
 
     schema = new Schema();

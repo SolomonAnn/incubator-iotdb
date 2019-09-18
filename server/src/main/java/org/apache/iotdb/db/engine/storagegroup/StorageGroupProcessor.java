@@ -68,7 +68,7 @@ import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.db.engine.fileSystem.FileFactory;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.tsfile.fileSystem.TSFileFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.Pair;
@@ -180,7 +180,7 @@ public class StorageGroupProcessor {
     this.schema = constructSchema(storageGroupName);
 
     try {
-      storageGroupSysDir = FileFactory.INSTANCE.getFile(systemInfoDir, storageGroupName);
+      storageGroupSysDir = SystemFileFactory.INSTANCE.getFile(systemInfoDir, storageGroupName);
       if (storageGroupSysDir.mkdirs()) {
         logger.info("Storage Group system Directory {} doesn't exist, create it",
             storageGroupSysDir.getPath());
@@ -210,7 +210,7 @@ public class StorageGroupProcessor {
       recoverUnseqFiles(unseqTsFiles);
 
       String taskName = storageGroupName + "-" + System.currentTimeMillis();
-      File mergingMods = FileFactory.INSTANCE.getFile(storageGroupSysDir, MERGING_MODIFICAITON_FILE_NAME);
+      File mergingMods = SystemFileFactory.INSTANCE.getFile(storageGroupSysDir, MERGING_MODIFICAITON_FILE_NAME);
       if (mergingMods.exists()) {
         mergingModification = new ModificationFile(mergingMods.getPath());
       }

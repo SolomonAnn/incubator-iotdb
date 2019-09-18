@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 
-import org.apache.iotdb.db.engine.fileSystem.FileFactory;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.PrimitiveMemTable;
 import org.apache.iotdb.db.engine.modification.Deletion;
@@ -46,6 +45,7 @@ import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.Schema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
@@ -56,8 +56,8 @@ public class LogReplayerTest {
   @Test
   public void test() throws IOException, ProcessorException, PathErrorException {
     String logNodePrefix = "testLogNode";
-    File tsFile = FileFactory.INSTANCE.getFile("temp", "test.ts");
-    File modF = FileFactory.INSTANCE.getFile("test.mod");
+    File tsFile = SystemFileFactory.INSTANCE.getFile("temp", "test.ts");
+    File modF = SystemFileFactory.INSTANCE.getFile("test.mod");
     ModificationFile modFile = new ModificationFile(modF.getPath());
     VersionController versionController = new VersionController() {
       @Override
