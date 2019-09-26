@@ -1,4 +1,4 @@
-///**
+///*
 // * Licensed to the Apache Software Foundation (ASF) under one
 // * or more contributor license agreements.  See the NOTICE file
 // * distributed with this work for additional information
@@ -287,8 +287,8 @@
 //      case MetadataOperationType.DELETE_PATH_FROM_MTREE:
 //        metadataManger.deletePaths(Collections.singletonList(new Path(args[1])));
 //        break;
-//      case MetadataOperationType.SET_STORAGE_LEVEL_TO_MTREE:
-//        metadataManger.setStorageLevelToMTree(args[1]);
+//      case MetadataOperationType.SET_STORAGE_GROUP_TO_MTREE:
+//        metadataManger.setStorageGroupToMTree(args[1]);
 //        break;
 //      case MetadataOperationType.ADD_A_PTREE:
 //        metadataManger.addAPTree(args[1]);
@@ -305,6 +305,12 @@
 //      case MetadataOperationType.UNLINK_MNODE_FROM_PTREE:
 //        metadataManger.unlinkMNodeFromPTree(args[1], args[2]);
 //        break;
+//      case MetadataOperationType.DELETE_STORAGE_GROUP_FROM_MTREE:
+//        List<Path> storageGroups = new ArrayList<>();
+//        for (int l = 1; l < args.length; l++){
+//          storageGroups.add(new Path(args[l]));
+//        }
+//        metadataManger.deleteStorageGroupsFromMTree(storageGroups);
 //      default:
 //        logger.error("Unrecognizable command {}", cmd);
 //    }
@@ -542,7 +548,7 @@
 //          for (int i = 0; i < fields.size(); i++) {
 //            Field field = fields.get(i);
 //            if (!field.isNull()) {
-//              measurementList.add(paths.get(i).getMeasurementPath());
+//              measurementList.add(paths.get(i).getMeasurement());
 //              if (fields.get(i).getDataType() == TSDataType.TEXT) {
 //                insertValues.add(String.format("'%s'", field.toString()));
 //              } else {
@@ -668,7 +674,7 @@
 //        Field field = fields.get(i);
 //        String[] measurementList = new String[1];
 //        if (!field.isNull()) {
-//          measurementList[0] = paths.get(i).getMeasurementPath();
+//          measurementList[0] = paths.get(i).getMeasurement();
 //          InsertPlan insertPlan = new InsertPlan(deviceID, record.getTimestamp(),
 //              measurementList, new String[]{field.getDataType() == TSDataType.TEXT ? String.format("'%s'", field.toString())
 //              : field.toString()});

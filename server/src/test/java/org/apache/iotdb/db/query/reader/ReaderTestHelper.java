@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -59,9 +60,9 @@ public abstract class ReaderTestHelper {
     EnvironmentUtils.cleanDir(systemDir);
   }
 
-  abstract protected void insertData() throws IOException, PathErrorException;
+  abstract protected void insertData() throws IOException, PathErrorException, QueryProcessorException;
 
-  protected void insertOneRecord(long time, int num) throws PathErrorException {
+  protected void insertOneRecord(long time, int num) throws QueryProcessorException {
     TSRecord record = new TSRecord(time, devicePath);
     record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath, String.valueOf(num)));
     storageGroupProcessor.insert(new InsertPlan(record));

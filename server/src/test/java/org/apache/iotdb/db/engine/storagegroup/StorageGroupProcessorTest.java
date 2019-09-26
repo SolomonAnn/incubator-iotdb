@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -31,6 +31,7 @@ import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
@@ -73,7 +74,7 @@ public class StorageGroupProcessorTest {
 
 
   @Test
-  public void testSequenceSyncClose() throws PathErrorException {
+  public void testSequenceSyncClose() throws PathErrorException, QueryProcessorException {
     for (int j = 1; j <= 10; j++) {
       TSRecord record = new TSRecord(j, devicePath);
       record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath, String.valueOf(j)));
@@ -92,7 +93,7 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
-  public void testIoTDBRowBatchWriteAndSyncClose() throws PathErrorException {
+  public void testIoTDBRowBatchWriteAndSyncClose() throws PathErrorException, QueryProcessorException {
 
     String[] measurements = new String[2];
     measurements[0] = "s0";
@@ -147,7 +148,7 @@ public class StorageGroupProcessorTest {
 
 
   @Test
-  public void testSeqAndUnSeqSyncClose() throws PathErrorException {
+  public void testSeqAndUnSeqSyncClose() throws PathErrorException, QueryProcessorException {
 
     for (int j = 21; j <= 30; j++) {
       TSRecord record = new TSRecord(j, devicePath);
@@ -179,7 +180,7 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
-  public void testMerge() throws PathErrorException{
+  public void testMerge() throws PathErrorException, QueryProcessorException {
 
     mergeLock = new AtomicLong(0);
     for (int j = 21; j <= 30; j++) {

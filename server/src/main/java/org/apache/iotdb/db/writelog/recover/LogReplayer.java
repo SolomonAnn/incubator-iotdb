@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -20,11 +20,10 @@
 package org.apache.iotdb.db.writelog.recover;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
@@ -33,7 +32,9 @@ import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.UpdatePlan;
@@ -41,6 +42,7 @@ import org.apache.iotdb.db.writelog.io.ILogReader;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.fileSystem.TSFileFactory;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.Schema;
 
@@ -49,7 +51,6 @@ import org.apache.iotdb.tsfile.write.schema.Schema;
  * the WALs from the logNode and redoes them into a given MemTable and ModificationFile.
  */
 public class LogReplayer {
-
   private String logNodePrefix;
   private String insertFilePath;
   private ModificationFile modFile;
@@ -87,7 +88,7 @@ public class LogReplayer {
    */
   public void replayLogs() throws ProcessorException, PathErrorException {
     WriteLogNode logNode = MultiFileLogNodeManager.getInstance().getNode(
-        logNodePrefix + SystemFileFactory.INSTANCE.getFile(insertFilePath).getName());
+        logNodePrefix + TSFileFactory.INSTANCE.getFile(insertFilePath).getName());
 
     ILogReader logReader = logNode.getLogReader();
     try {
@@ -99,10 +100,14 @@ public class LogReplayer {
           replayDelete((DeletePlan) plan);
         } else if (plan instanceof UpdatePlan) {
           replayUpdate((UpdatePlan) plan);
+        } else if (plan instanceof BatchInsertPlan) {
+          replayBatchInsert((BatchInsertPlan) plan);
         }
       }
     } catch (IOException e) {
       throw new ProcessorException("Cannot replay logs", e);
+    } catch (QueryProcessorException e) {
+      throw new ProcessorException("Cannot replay logs for query processor exception", e);
     } finally {
       logReader.close();
     }
@@ -114,16 +119,42 @@ public class LogReplayer {
     List<Path> paths = deletePlan.getPaths();
     for (Path path : paths) {
       recoverMemTable.delete(path.getDevicePath(), path.getMeasurementPath(), deletePlan.getDeleteTime());
-      modFile.write(new Deletion(path, versionController.nextVersion(),deletePlan.getDeleteTime()));
+      modFile
+          .write(new Deletion(path, versionController.nextVersion(), deletePlan.getDeleteTime()));
     }
   }
 
-  private void replayInsert(InsertPlan insertPlan) throws PathErrorException {
+  private void replayBatchInsert(BatchInsertPlan batchInsertPlan) throws QueryProcessorException {
+    if (currentTsFileResource != null) {
+      // the last chunk group may contain the same data with the logs, ignore such logs in seq file
+      Long lastEndTime = currentTsFileResource.getEndTimeMap().get(batchInsertPlan.getDevicePath());
+      if (lastEndTime != null && lastEndTime >= batchInsertPlan.getMinTime() &&
+          !acceptDuplication) {
+        return;
+      }
+      Long startTime = tempStartTimeMap.get(batchInsertPlan.getDevicePath());
+      Long deviceId = MManager.getInstance().getDeviceIdByPath(batchInsertPlan.getDevicePath());
+      if (startTime == null || startTime > batchInsertPlan.getMinTime()) {
+        tempStartTimeMap.put(deviceId, batchInsertPlan.getMinTime());
+      }
+      Long endTime = tempEndTimeMap.get(batchInsertPlan.getDevicePath());
+      if (endTime == null || endTime < batchInsertPlan.getMaxTime()) {
+        tempEndTimeMap.put(deviceId, batchInsertPlan.getMaxTime());
+      }
+    }
+    ArrayList<Integer> index = new ArrayList<>();
+    for (int i = 0; i < batchInsertPlan.getRowCount(); i++) {
+      index.add(i);
+    }
+    recoverMemTable.insertBatch(batchInsertPlan, index);
+  }
+
+  private void replayInsert(InsertPlan insertPlan) throws QueryProcessorException {
     if (currentTsFileResource != null) {
       // the last chunk group may contain the same data with the logs, ignore such logs in seq file
       Long deviceId = MManager.getInstance().getDeviceIdByPath(insertPlan.getDevicePath());
       Long lastEndTime = currentTsFileResource.getEndTimeMap().get(deviceId);
-      if ( lastEndTime != null && lastEndTime >= insertPlan.getTime() &&
+      if (lastEndTime != null && lastEndTime >= insertPlan.getTime() &&
           !acceptDuplication) {
         return;
       }

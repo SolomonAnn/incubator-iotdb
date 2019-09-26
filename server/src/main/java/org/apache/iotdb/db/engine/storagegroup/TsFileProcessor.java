@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,6 +21,7 @@ package org.apache.iotdb.db.engine.storagegroup;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -45,12 +46,13 @@ import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
 import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.rescon.MemTablePool;
-import org.apache.iotdb.rpc.TSStatusType;
+import org.apache.iotdb.rpc.TSStatusCode;
 import org.apache.iotdb.db.utils.QueryUtils;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
@@ -135,9 +137,8 @@ public class TsFileProcessor {
    * @param insertPlan physical plan of insertion
    * @return succeed or fail
    */
-  public boolean insert(InsertPlan insertPlan) throws PathErrorException {
+  public boolean insert(InsertPlan insertPlan) throws PathErrorException, QueryProcessorException {
     Long deviceId;
-
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
@@ -167,18 +168,19 @@ public class TsFileProcessor {
   }
 
   public boolean insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes,
-      Integer[] results) throws PathErrorException {
+      Integer[] results) throws PathErrorException, QueryProcessorException {
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
+        batchInsertPlan.setIndex(new HashSet<>(indexes));
         getLogNode().write(batchInsertPlan);
       } catch (IOException e) {
         logger.error("write WAL failed", e);
         for (int index: indexes) {
-          results[index] = TSStatusType.INTERNAL_SERVER_ERROR.getStatusCode();
+          results[index] = TSStatusCode.INTERNAL_SERVER_ERROR.getStatusCode();
         }
         return false;
       }

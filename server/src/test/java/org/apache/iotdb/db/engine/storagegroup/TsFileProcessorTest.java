@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -33,6 +33,7 @@ import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.version.SysTimeVersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
@@ -75,8 +76,7 @@ public class TsFileProcessorTest {
   }
 
   @Test
-  public void testWriteAndFlush()
-      throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
+  public void testWriteAndFlush() throws IOException, PathErrorException, QueryProcessorException {
     processor = new TsFileProcessor(storageGroup, SystemFileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -122,8 +122,7 @@ public class TsFileProcessorTest {
   }
 
   @Test
-  public void testWriteAndRestoreMetadata()
-      throws IOException, PathErrorException {
+  public void testWriteAndRestoreMetadata() throws IOException, PathErrorException, QueryProcessorException {
     processor = new TsFileProcessor(storageGroup, SystemFileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -189,8 +188,7 @@ public class TsFileProcessorTest {
 
 
   @Test
-  public void testMultiFlush()
-      throws WriteProcessException, IOException, TsFileProcessorException, PathErrorException {
+  public void testMultiFlush() throws IOException, PathErrorException, QueryProcessorException {
     processor = new TsFileProcessor(storageGroup, SystemFileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE, x -> {
     },
@@ -225,8 +223,7 @@ public class TsFileProcessorTest {
 
 
   @Test
-  public void testWriteAndClose()
-      throws WriteProcessException, IOException, PathErrorException {
+  public void testWriteAndClose() throws IOException, PathErrorException, QueryProcessorException {
     processor = new TsFileProcessor(storageGroup, SystemFileFactory.INSTANCE.getFile(filePath),
         SchemaUtils.constructSchema(devicePath), SysTimeVersionController.INSTANCE,
         unsealedTsFileProcessor -> {

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -26,6 +26,7 @@ import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
@@ -52,7 +53,6 @@ public class DeviceMetaDataCacheTest {
   private String measurementPath3 = "s3";
   private String measurementPath4 = "s4";
   private String measurementPath5 = "s5";
-  private String measurementPath100 = "s100";
   private StorageGroupProcessor storageGroupProcessor;
   private String systemDir = "data/info";
 
@@ -75,18 +75,17 @@ public class DeviceMetaDataCacheTest {
     EnvironmentUtils.cleanDir(systemDir);
   }
 
-  private void insertOneRecord(long time, int num) throws PathErrorException {
+  private void insertOneRecord(long time, int num) throws QueryProcessorException {
     TSRecord record = new TSRecord(time, devicePath0);
     record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath0, String.valueOf(num)));
     record.addTuple(DataPoint.getDataPoint(TSDataType.INT64, measurementPath1, String.valueOf(num)));
     record.addTuple(DataPoint.getDataPoint(TSDataType.FLOAT, measurementPath2, String.valueOf(num)));
     record.addTuple(DataPoint.getDataPoint(TSDataType.DOUBLE, measurementPath3, String.valueOf(num)));
     record.addTuple(DataPoint.getDataPoint(TSDataType.BOOLEAN, measurementPath4, "True"));
-//    record.addTuple(DataPoint.getDataPoint(TSDataType.TEXT, measurementPath5, String.valueOf(num)));
     storageGroupProcessor.insert(new InsertPlan(record));
   }
 
-  protected void insertData() throws IOException, PathErrorException {
+  protected void insertData() throws IOException, QueryProcessorException {
     for (int j = 1; j <= 100; j++) {
       insertOneRecord(j, j);
     }
