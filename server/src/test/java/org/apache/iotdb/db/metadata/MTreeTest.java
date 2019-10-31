@@ -57,14 +57,14 @@ public class MTreeTest {
     try {
       root.addTimeseriesPath("root.laptop.d1.s1", TSDataType.INT32, TSEncoding.RLE, CompressionType.valueOf
           (TSFileDescriptor.getInstance().getConfig().getCompressor()), Collections.EMPTY_MAP);
-    } catch (PathErrorException e) {
+    } catch (PathErrorException | StorageGroupException e) {
       e.printStackTrace();
       fail(e.getMessage());
     }
     try {
       root.addTimeseriesPath("root.laptop.d1.s1.b", TSDataType.INT32, TSEncoding.RLE, CompressionType.valueOf
           (TSFileDescriptor.getInstance().getConfig().getCompressor()), Collections.EMPTY_MAP);
-    } catch (PathErrorException e) {
+    } catch (PathErrorException | StorageGroupException e) {
       Assert.assertEquals(
           String.format("The Node [%s] is left node, the timeseries %s can't be created", "s1",
               "root.laptop.d1.s1.b"), e.getMessage());
@@ -80,7 +80,7 @@ public class MTreeTest {
     try {
       root.addTimeseriesPath("root.laptop.d1.s1", TSDataType.INT32, TSEncoding.RLE, CompressionType.valueOf
           (TSFileDescriptor.getInstance().getConfig().getCompressor()), Collections.EMPTY_MAP);
-    } catch (PathErrorException e1) {
+    } catch (PathErrorException | StorageGroupException e1) {
       fail(e1.getMessage());
     }
     assertTrue(root.isPathExist("root.laptop.d1"));
@@ -89,7 +89,7 @@ public class MTreeTest {
     try {
       root.addTimeseriesPath("aa.bb.cc", TSDataType.INT32, TSEncoding.RLE, CompressionType.valueOf
           (TSFileDescriptor.getInstance().getConfig().getCompressor()), Collections.EMPTY_MAP);
-    } catch (PathErrorException e) {
+    } catch (PathErrorException | StorageGroupException e) {
       Assert.assertEquals(String.format("Timeseries %s is not right.", "aa.bb.cc"), e.getMessage());
     }
   }

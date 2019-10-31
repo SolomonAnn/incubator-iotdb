@@ -121,9 +121,9 @@ public class TTLTest {
   @Test
   public void testTTLWrite() throws QueryProcessorException {
     InsertPlan insertPlan = new InsertPlan();
-    insertPlan.setDeviceId(sg1);
+    insertPlan.setDevicePath(sg1);
     insertPlan.setTime(System.currentTimeMillis());
-    insertPlan.setMeasurements(new String[]{"s1"});
+    insertPlan.setMeasurementPaths(new String[]{"s1"});
     insertPlan.setValues(new String[]{"1"});
     insertPlan.setDataTypes(new TSDataType[]{TSDataType.INT64});
 
@@ -146,9 +146,9 @@ public class TTLTest {
 
   private void prepareData() throws QueryProcessorException {
     InsertPlan insertPlan = new InsertPlan();
-    insertPlan.setDeviceId(sg1);
+    insertPlan.setDevicePath(sg1);
     insertPlan.setTime(System.currentTimeMillis());
-    insertPlan.setMeasurements(new String[]{"s1"});
+    insertPlan.setMeasurementPaths(new String[]{"s1"});
     insertPlan.setValues(new String[]{"1"});
     insertPlan.setDataTypes(new TSDataType[]{TSDataType.INT64});
 

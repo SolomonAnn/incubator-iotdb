@@ -33,6 +33,7 @@ import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.tsfile.file.metadata.ChunkGroupMetaData;
@@ -213,7 +214,7 @@ public class TsFileRecoverPerformer {
       // close file
       restorableTsFileIOWriter.endFile(schema);
       tsFileResource.serialize();
-    } catch (ExecutionException | InterruptedException | IOException e) {
+    } catch (ExecutionException | InterruptedException | IOException | StorageGroupException e) {
       Thread.currentThread().interrupt();
       throw new ProcessorException(e);
     }

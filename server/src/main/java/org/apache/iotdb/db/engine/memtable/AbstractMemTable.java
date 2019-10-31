@@ -27,6 +27,7 @@ import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.modification.Modification;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
@@ -68,7 +69,7 @@ public abstract class AbstractMemTable implements IMemTable {
   }
 
   private IWritableMemChunk createIfNotExistAndGet(String devicePath, String measurementPath,
-      TSDataType dataType) throws PathErrorException {
+      TSDataType dataType) throws PathErrorException, StorageGroupException {
     Long deviceId = MManager.getInstance().getDeviceIdByPath(devicePath);
     Long measurementId = MManager.getInstance().getMeasurementIdByPath(devicePath, measurementPath);
     if (!memTableMap.containsKey(deviceId)) {
@@ -93,7 +94,7 @@ public abstract class AbstractMemTable implements IMemTable {
       }
       long recordSizeInByte = MemUtils.getRecordSize(insertPlan);
       memSize += recordSizeInByte;
-    } catch (RuntimeException e) {
+    } catch (RuntimeException | StorageGroupException e) {
       throw new QueryProcessorException(e);
     }
   }
@@ -105,7 +106,7 @@ public abstract class AbstractMemTable implements IMemTable {
       write(batchInsertPlan, indexes);
       long recordSizeInByte = MemUtils.getRecordSize(batchInsertPlan);
       memSize += recordSizeInByte;
-    } catch (RuntimeException e) {
+    } catch (RuntimeException | StorageGroupException e) {
       throw new QueryProcessorException(e);
     }
   }
@@ -113,13 +114,14 @@ public abstract class AbstractMemTable implements IMemTable {
 
   @Override
   public void write(String devicePath, String measurementPath, TSDataType dataType, long insertTime,
-      String insertValue) throws PathErrorException {
+      String insertValue) throws PathErrorException, StorageGroupException {
     IWritableMemChunk memSeries = createIfNotExistAndGet(devicePath, measurementPath, dataType);
     memSeries.write(insertTime, insertValue);
   }
 
   @Override
-  public void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException {
+  public void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes)
+      throws PathErrorException, StorageGroupException {
     for (int i = 0; i < batchInsertPlan.getMeasurementPaths().length; i++) {
       IWritableMemChunk memSeries = createIfNotExistAndGet(batchInsertPlan.getDevicePath(),
           batchInsertPlan.getMeasurementPaths()[i], batchInsertPlan.getDataTypes()[i]);

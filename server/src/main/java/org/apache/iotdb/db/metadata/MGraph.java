@@ -66,7 +66,7 @@ public class MGraph implements Serializable {
    * this is just for compatibility
    */
   public void addPathToMTree(String path, String dataType, String encoding)
-      throws PathErrorException {
+      throws PathErrorException, StorageGroupException {
     TSDataType tsDataType = TSDataType.valueOf(dataType);
     TSEncoding tsEncoding = TSEncoding.valueOf(encoding);
     CompressionType compressionType = CompressionType.valueOf(TSFileDescriptor.getInstance().getConfig().getCompressor());
@@ -80,7 +80,8 @@ public class MGraph implements Serializable {
    * @param path Format: root.node.(node)*
    */
   public void addPathToMTree(String path, TSDataType dataType, TSEncoding encoding,
-      CompressionType compressor, Map<String, String> props) throws PathErrorException {
+      CompressionType compressor, Map<String, String> props)
+      throws PathErrorException, StorageGroupException {
     String[] nodes = path.trim().split(DOUB_SEPARATOR);
     if (nodes.length == 0) {
       throw new PathErrorException("Timeseries is null");
@@ -362,7 +363,8 @@ public class MGraph implements Serializable {
     return mtree.getDeviceIdByPath(devicePath);
   }
 
-  public Long getMeasurementIdByPath(String devicePath, String measurementPath) throws PathErrorException {
+  public Long getMeasurementIdByPath(String devicePath, String measurementPath)
+      throws PathErrorException, StorageGroupException {
     return mtree.getMeasurementIdByPath(devicePath, measurementPath);
   }
 
@@ -370,7 +372,8 @@ public class MGraph implements Serializable {
     return mtree.getDevicePathById(deviceId);
   }
 
-  public String getMeasurementPathById(String devicePath, Long measurementId) throws PathErrorException {
+  public String getMeasurementPathById(String devicePath, Long measurementId)
+      throws PathErrorException, StorageGroupException {
     return mtree.getMeasurementPathById(devicePath, measurementId);
   }
 

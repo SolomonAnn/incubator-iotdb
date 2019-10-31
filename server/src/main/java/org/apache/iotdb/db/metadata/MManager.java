@@ -1353,7 +1353,8 @@ public class MManager {
     }
   }
 
-  public Long getMeasurementIdByPath(String devicePath, String measurementPath) throws PathErrorException {
+  public Long getMeasurementIdByPath(String devicePath, String measurementPath)
+      throws PathErrorException, StorageGroupException {
     lock.readLock().lock();
     try {
       return mgraph.getMeasurementIdByPath(devicePath, measurementPath);
@@ -1371,7 +1372,8 @@ public class MManager {
     }
   }
 
-  public String getMeasurementPathById(String devicePath, Long measurementId) throws PathErrorException {
+  public String getMeasurementPathById(String devicePath, Long measurementId)
+      throws PathErrorException, StorageGroupException {
     lock.readLock().lock();
     try {
       return mgraph.getMeasurementPathById(devicePath, measurementId);

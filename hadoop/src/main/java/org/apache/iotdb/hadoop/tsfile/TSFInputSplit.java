@@ -162,7 +162,7 @@ public class TSFInputSplit extends FileSplit implements Writable, org.apache.had
     }
 
     public ChunkGroupInfo(ChunkGroupMetaData chunkGroupMetaData) {
-      this.deviceId = chunkGroupMetaData.getDeviceID();
+      this.deviceId = chunkGroupMetaData.getDevicePath();
       this.measurementIds = chunkGroupMetaData.getChunkMetaDataList().stream()
               .map(ChunkMetaData::getMeasurementUid)
               .distinct()

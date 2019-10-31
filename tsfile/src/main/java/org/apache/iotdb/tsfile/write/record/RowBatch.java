@@ -33,9 +33,9 @@ public class RowBatch {
   private static final int DEFAULT_SIZE = 1024;
 
   /**
-   * deviceId of this row batch
+   * devicePath of this row batch
    */
-  public String deviceId;
+  public String devicePath;
   /**
    * the list of measurement schemas for creating the row batch
    */
@@ -79,12 +79,12 @@ public class RowBatch {
    * Only call this constructor directly for testing purposes.
    * RowBatch should normally always be default size.
    *
-   * @param deviceId the name of the device specified to be written in
+   * @param devicePath the name of the device specified to be written in
    * @param measurements the list of measurement schemas for creating the row batch
    * @param maxBatchSize the maximum number of rows for this row batch
    */
-  public RowBatch(String deviceId, List<MeasurementSchema> measurements, int maxBatchSize) {
-    this.deviceId = deviceId;
+  public RowBatch(String devicePath, List<MeasurementSchema> measurements, int maxBatchSize) {
+    this.devicePath = devicePath;
     this.measurements = measurements;
     this.maxBatchSize = maxBatchSize;
 

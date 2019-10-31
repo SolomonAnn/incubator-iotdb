@@ -27,9 +27,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.SyncDeviceOwnerConflictException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.tsfile.file.metadata.ChunkGroupMetaData;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
@@ -116,7 +118,7 @@ public class FileLoader implements IFileLoader {
   }
 
   @Override
-  public void handleLoadTask(LoadTask task) throws IOException {
+  public void handleLoadTask(LoadTask task) throws IOException, PathErrorException {
     switch (task.type) {
       case ADD:
         loadNewTsfile(task.file);
@@ -129,7 +131,7 @@ public class FileLoader implements IFileLoader {
     }
   }
 
-  private void loadNewTsfile(File newTsFile) throws IOException {
+  private void loadNewTsfile(File newTsFile) throws IOException, PathErrorException {
     if (curType != LoadType.ADD) {
       loadLog.startLoadTsFiles();
       curType = LoadType.ADD;
@@ -152,7 +154,8 @@ public class FileLoader implements IFileLoader {
     loadLog.finishLoadTsfile(newTsFile);
   }
 
-  private void checkTsFileResource(TsFileResource tsFileResource) throws IOException {
+  private void checkTsFileResource(TsFileResource tsFileResource)
+      throws IOException, PathErrorException {
     if (!tsFileResource.fileExists()) {
       // .resource file does not exist, read file metadata and recover tsfile resource
       try (TsFileSequenceReader reader = new TsFileSequenceReader(
@@ -164,10 +167,10 @@ public class FileLoader implements IFileLoader {
               .getChunkGroupMetaDataList();
           for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
             for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
-              tsFileResource.updateStartTime(chunkGroupMetaData.getDeviceID(),
-                  chunkMetaData.getStartTime());
-              tsFileResource
-                  .updateEndTime(chunkGroupMetaData.getDeviceID(), chunkMetaData.getEndTime());
+              Long deviceId = MManager.getInstance().
+                  getDeviceIdByPath(chunkGroupMetaData.getDevicePath());
+              tsFileResource.updateStartTime(deviceId, chunkMetaData.getStartTime());
+              tsFileResource.updateEndTime(deviceId, chunkMetaData.getEndTime());
             }
           }
         }

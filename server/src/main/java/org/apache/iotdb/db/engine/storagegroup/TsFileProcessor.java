@@ -46,6 +46,7 @@ import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.CloseTsFileCallBack;
 import org.apache.iotdb.db.engine.version.VersionController;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.exception.TsFileProcessorException;
 import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -445,7 +446,7 @@ public class TsFileProcessor {
       try {
         writer.mark();
         flushTask.syncFlushMemTable();
-      } catch (ExecutionException | InterruptedException | IOException | PathErrorException e) {
+      } catch (ExecutionException | InterruptedException | IOException | PathErrorException | StorageGroupException e) {
         logger.error("meet error when flushing a memtable, change system mode to read-only", e);
         IoTDBDescriptor.getInstance().getConfig().setReadOnly(true);
         try {

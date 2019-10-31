@@ -53,7 +53,7 @@ public class FileLoaderManager {
 
   private ExecutorService loadTaskRunnerPool;
 
-  private Map<String, String> deviceOwnerMap = new HashMap<>();
+  private Map<Long, String> deviceOwnerMap = new HashMap<>();
 
   private File deviceOwnerFile;
 
@@ -96,7 +96,7 @@ public class FileLoaderManager {
       throws SyncDeviceOwnerConflictException, IOException {
     String curOwner = tsFileResource.getFile().getParentFile().getParentFile().getParentFile()
         .getName();
-    Set<String> deviceSet = tsFileResource.getStartTimeMap().keySet();
+    Set<Long> deviceSet = tsFileResource.getStartTimeMap().keySet();
     checkDeviceConflict(curOwner, deviceSet);
     updateDeviceOwner(curOwner, deviceSet);
   }
@@ -107,9 +107,9 @@ public class FileLoaderManager {
    * @param curOwner sender name that want to be owner.
    * @param deviceSet device set
    */
-  private void checkDeviceConflict(String curOwner, Set<String> deviceSet)
+  private void checkDeviceConflict(String curOwner, Set<Long> deviceSet)
       throws SyncDeviceOwnerConflictException {
-    for (String device : deviceSet) {
+    for (Long device : deviceSet) {
       if (deviceOwnerMap.containsKey(device) && !deviceOwnerMap.get(device).equals(curOwner)) {
         throw new SyncDeviceOwnerConflictException(String
             .format("Device: %s, correct owner: %s, conflict owner: %s", device,
@@ -124,9 +124,9 @@ public class FileLoaderManager {
    * @param curOwner sender name that want to be owner.
    * @param deviceSet device set.
    */
-  private void updateDeviceOwner(String curOwner, Set<String> deviceSet) throws IOException {
+  private void updateDeviceOwner(String curOwner, Set<Long> deviceSet) throws IOException {
     boolean modify = false;
-    for (String device : deviceSet) {
+    for (Long device : deviceSet) {
       if (!deviceOwnerMap.containsKey(device)) {
         deviceOwnerMap.put(device, curOwner);
         modify = true;
@@ -143,7 +143,7 @@ public class FileLoaderManager {
       throws IOException, ClassNotFoundException {
     try (ObjectInputStream deviceOwnerInput = new ObjectInputStream(
         new FileInputStream(deviceOwnerFile))) {
-      deviceOwnerMap = (Map<String, String>) deviceOwnerInput.readObject();
+      deviceOwnerMap = (Map<Long, String>) deviceOwnerInput.readObject();
     }
   }
 

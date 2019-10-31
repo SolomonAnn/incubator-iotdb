@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.utils.MathUtils;
 import org.apache.iotdb.db.utils.TimeValuePair;
 import org.apache.iotdb.db.utils.TsPrimitiveType;
@@ -64,7 +65,7 @@ public class PrimitiveMemTableTest {
   }
 
   @Test
-  public void simpleTest() throws PathErrorException {
+  public void simpleTest() throws PathErrorException, StorageGroupException {
     IMemTable memTable = new PrimitiveMemTable();
     int count = 10;
     String devicePath = "d1";
@@ -92,7 +93,7 @@ public class PrimitiveMemTableTest {
   }
 
   private void write(IMemTable memTable, String devicePath, String sensorId, TSDataType dataType,
-      int size) throws PathErrorException {
+      int size) throws PathErrorException, StorageGroupException {
     TimeValuePair[] ret = genTimeValuePair(size, dataType);
 
     for (int i = 0; i < ret.length; i++) {
@@ -130,7 +131,7 @@ public class PrimitiveMemTableTest {
   }
 
   @Test
-  public void testFloatType() throws PathErrorException {
+  public void testFloatType() throws PathErrorException, StorageGroupException {
     IMemTable memTable = new PrimitiveMemTable();
     String devicePath = "d1";
     int size = 100;
@@ -138,7 +139,7 @@ public class PrimitiveMemTableTest {
   }
 
   @Test
-  public void testAllType() throws PathErrorException {
+  public void testAllType() throws PathErrorException, StorageGroupException {
     IMemTable memTable = new PrimitiveMemTable();
     int count = 10;
     String devicePath = "d1";

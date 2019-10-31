@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.iotdb.db.engine.modification.Deletion;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
@@ -40,9 +41,9 @@ public interface IMemTable {
   Map<Long, Map<Long, IWritableMemChunk>> getMemTableMap();
 
   void write(String device, String measurement, TSDataType dataType,
-      long insertTime, String insertValue) throws PathErrorException;
+      long insertTime, String insertValue) throws PathErrorException, StorageGroupException;
 
-  void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException;
+  void write(BatchInsertPlan batchInsertPlan, List<Integer> indexes) throws PathErrorException, StorageGroupException;
 
   /**
    * @return the number of points

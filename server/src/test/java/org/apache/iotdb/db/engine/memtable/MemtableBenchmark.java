@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.engine.memtable;
 
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 /**
@@ -39,7 +40,7 @@ public class MemtableBenchmark {
     }
   }
 
-  public static void main(String[] args) throws PathErrorException {
+  public static void main(String[] args) throws PathErrorException, StorageGroupException {
     IMemTable memTable = new PrimitiveMemTable();
     final long startTime = System.currentTimeMillis();
     // cpu not locality

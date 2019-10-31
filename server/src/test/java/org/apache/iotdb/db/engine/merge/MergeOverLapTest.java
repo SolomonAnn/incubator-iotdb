@@ -34,6 +34,7 @@ import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.MetadataErrorException;
 import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.StorageEngineException;
+import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.reader.resourceRelated.SeqResourceIterateReader;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
@@ -67,7 +68,8 @@ public class MergeOverLapTest extends MergeTest {
   }
 
   @Override
-  void prepareFiles(int seqFileNum, int unseqFileNum) throws IOException, WriteProcessException {
+  void prepareFiles(int seqFileNum, int unseqFileNum)
+      throws IOException, WriteProcessException, PathErrorException {
     for (int i = 0; i < seqFileNum; i++) {
       File file = new File(
           i + "seq" + IoTDBConstant.TSFILE_NAME_SEPARATOR + i + IoTDBConstant.TSFILE_NAME_SEPARATOR
@@ -97,33 +99,35 @@ public class MergeOverLapTest extends MergeTest {
 
   private void prepareUnseqFile(TsFileResource tsFileResource, long timeOffset, long ptNum,
       long valueOffset)
-      throws IOException, WriteProcessException {
+      throws IOException, WriteProcessException, PathErrorException {
     TsFileWriter fileWriter = new TsFileWriter(tsFileResource.getFile());
     for (MeasurementSchema measurementSchema : measurementSchemas) {
       fileWriter.addMeasurement(measurementSchema);
     }
     for (long i = timeOffset; i < timeOffset + ptNum; i++) {
       for (int j = 0; j < deviceNum; j++) {
-        TSRecord record = new TSRecord(i, deviceIds[j]);
+        TSRecord record = new TSRecord(i, devicePaths[j]);
         for (int k = 0; k < measurementNum; k++) {
           record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
               measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
         }
         fileWriter.write(record);
-        tsFileResource.updateStartTime(deviceIds[j], i);
-        tsFileResource.updateEndTime(deviceIds[j], i);
+        Long deviceId = MManager.getInstance().getDeviceIdByPath(devicePaths[j]);
+        tsFileResource.updateStartTime(deviceId, i);
+        tsFileResource.updateEndTime(deviceId, i);
       }
       // insert overlapping tuples
       if ((i + 1) % 100 == 0) {
         for (int j = 0; j < deviceNum; j++) {
-          TSRecord record = new TSRecord(i, deviceIds[j]);
+          TSRecord record = new TSRecord(i, devicePaths[j]);
           for (int k = 0; k < measurementNum; k++) {
             record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
                 measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
           }
           fileWriter.write(record);
-          tsFileResource.updateStartTime(deviceIds[j], i);
-          tsFileResource.updateEndTime(deviceIds[j], i);
+          Long deviceId = MManager.getInstance().getDeviceIdByPath(devicePaths[j]);
+          tsFileResource.updateStartTime(deviceId, i);
+          tsFileResource.updateEndTime(deviceId, i);
         }
       }
       if ((i + 1) % flushInterval == 0) {
@@ -141,7 +145,7 @@ public class MergeOverLapTest extends MergeTest {
     mergeTask.call();
 
     QueryContext context = new QueryContext();
-    Path path = new Path(deviceIds[0], measurementSchemas[0].getMeasurementId());
+    Path path = new Path(devicePaths[0], measurementSchemas[0].getMeasurementId());
     SeqResourceIterateReader tsFilesReader = new SeqResourceIterateReader(path,
         Collections.singletonList(seqResources.get(0)),
         null, context);

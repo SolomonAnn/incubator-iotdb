@@ -24,6 +24,7 @@ import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.exception.FlushRunTimeException;
 import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.utils.datastructure.TVList;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
@@ -73,7 +74,7 @@ public class MemTableFlushTask {
   /**
    * the function for flushing memtable.
    */
-  public void syncFlushMemTable() throws ExecutionException, InterruptedException, PathErrorException {
+  public void syncFlushMemTable() throws ExecutionException, InterruptedException, PathErrorException, StorageGroupException {
     long start = System.currentTimeMillis();
     long sortTime = 0;
     String devicePath;

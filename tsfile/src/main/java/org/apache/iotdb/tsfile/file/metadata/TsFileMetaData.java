@@ -308,7 +308,7 @@ public class TsFileMetaData {
   private List<String> getAllPath(List<ChunkGroupMetaData> chunkGroupMetaDataList) {
     List<String> res = new ArrayList<>();
     for (ChunkGroupMetaData chunkGroupMetaData : chunkGroupMetaDataList) {
-      String deviceId = chunkGroupMetaData.getDeviceID();
+      String deviceId = chunkGroupMetaData.getDevicePath();
       for (ChunkMetaData chunkMetaData : chunkGroupMetaData.getChunkMetaDataList()) {
         res.add(deviceId + PATH_SEPARATOR + chunkMetaData.getMeasurementUid());
       }

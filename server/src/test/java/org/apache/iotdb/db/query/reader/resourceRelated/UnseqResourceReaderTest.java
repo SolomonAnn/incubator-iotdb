@@ -21,6 +21,7 @@ package org.apache.iotdb.db.query.reader.resourceRelated;
 
 import java.io.IOException;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.query.context.QueryContext;
 import org.apache.iotdb.db.query.reader.IPointReader;
@@ -66,7 +67,8 @@ public class UnseqResourceReaderTest extends ReaderTestHelper {
   }
 
   @Test
-  public void testUnseqResourceMergeReaderWithGlobalTimeFilter() throws IOException {
+  public void testUnseqResourceMergeReaderWithGlobalTimeFilter()
+      throws IOException, PathErrorException {
     Path path = new Path(devicePath, measurementPath);
     QueryDataSource queryDataSource = storageGroupProcessor.query(devicePath, measurementPath, context,
         null);
@@ -111,7 +113,7 @@ public class UnseqResourceReaderTest extends ReaderTestHelper {
   }
 
   @Test
-  public void testUnseqResourceReaderByTimestamp() throws IOException {
+  public void testUnseqResourceReaderByTimestamp() throws IOException, PathErrorException {
     Path path = new Path(devicePath, measurementPath);
     QueryDataSource queryDataSource = storageGroupProcessor.query(devicePath, measurementPath, context,
         null);

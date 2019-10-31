@@ -61,7 +61,7 @@ abstract class MergeTest {
   long flushInterval = 20;
   TSEncoding encoding = TSEncoding.PLAIN;
 
-  String[] deviceIds;
+  String[] devicePaths;
   MeasurementSchema[] measurementSchemas;
 
   List<TsFileResource> seqResources = new ArrayList<>();

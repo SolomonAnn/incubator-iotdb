@@ -173,7 +173,7 @@ public class Session {
   public synchronized TSExecuteBatchStatementResp insertBatch(RowBatch rowBatch)
       throws IoTDBSessionException {
     TSBatchInsertionReq request = new TSBatchInsertionReq();
-    request.deviceId = rowBatch.deviceId;
+    request.deviceId = rowBatch.devicePath;
     for (MeasurementSchema measurementSchema : rowBatch.measurements) {
       request.addToMeasurements(measurementSchema.getMeasurementId());
       request.addToTypes(measurementSchema.getType().ordinal());

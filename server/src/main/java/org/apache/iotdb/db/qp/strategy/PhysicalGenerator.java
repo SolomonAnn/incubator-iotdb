@@ -324,7 +324,7 @@ public class PhysicalGenerator {
             List<String> actualPaths = executor.getAllPaths(fullPath.getFullPath());
             for (String pathStr : actualPaths) {
               Path path = new Path(pathStr);
-              String device = path.getDevice();
+              String device = path.getDevicePath();
               // update tmpDeviceSet for a full path
               tmpDeviceSet.add(device);
 
@@ -337,7 +337,7 @@ public class PhysicalGenerator {
               }
 
               // get pathForDataType and measurementColumn
-              String measurement = path.getMeasurement();
+              String measurement = path.getMeasurementPath();
               String pathForDataType;
               String measurementColumn;
               if (originAggregations != null && !originAggregations.isEmpty()) {

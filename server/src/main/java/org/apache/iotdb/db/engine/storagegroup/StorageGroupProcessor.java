@@ -801,7 +801,7 @@ public class StorageGroupProcessor {
 
     for (TsFileResource tsFileResource : tsFileResources) {
       // TODO: try filtering files if the query contains time filter
-      if (!testResourceDevice(tsFileResource, devicePath)) {
+      if (!testResourceDevice(tsFileResource, MManager.getInstance().getDeviceIdByPath(devicePath))) {
         continue;
       }
       closeQueryLock.readLock().lock();
@@ -832,7 +832,7 @@ public class StorageGroupProcessor {
    * @param deviceId
    * @return true if the device is contained in the TsFile and it lives beyond TTL
    */
-  private boolean testResourceDevice(TsFileResource tsFileResource, String deviceId) {
+  private boolean testResourceDevice(TsFileResource tsFileResource, Long deviceId) {
     if (!tsFileResource.containsDevice(deviceId)) {
       return false;
     }
@@ -909,7 +909,7 @@ public class StorageGroupProcessor {
       throws IOException, PathErrorException {
     String devicePath = deletion.getDevicePath();
     for (TsFileResource tsFileResource : tsFileResourceList) {
-      if (!tsFileResource.containsDevice(devicePath) ||
+      if (!tsFileResource.containsDevice(MManager.getInstance().getDeviceIdByPath(devicePath)) ||
           deletion.getTimestamp() < tsFileResource.getStartTimeMap().
               get(MManager.getInstance().getDeviceIdByPath(devicePath))) {
         continue;
