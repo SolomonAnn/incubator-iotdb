@@ -29,15 +29,17 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.iotdb.db.engine.modification.ModificationFile;
 import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
-import org.apache.iotdb.tsfile.fileSystem.TSFileFactory;
+import org.apache.iotdb.tsfile.fileSystem.fsFactory.FSFactory;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.utils.ReadWriteIOUtils;
 
 public class TsFileResource {
 
+  // tsfile
   private File file;
 
   public static final String RESOURCE_SUFFIX = ".resource";
-  public static final String TEMP_SUFFIX = ".temp";
+  static final String TEMP_SUFFIX = ".temp";
 
   /**
    * device -> start time
@@ -54,12 +56,14 @@ public class TsFileResource {
   private ModificationFile modFile;
 
   private volatile boolean closed = false;
+  private volatile boolean deleted = false;
+  private volatile boolean isMerging = false;
 
   /**
    * Chunk metadata list of unsealed tsfile. Only be set in a temporal TsFileResource in a query
    * process.
    */
-  private List<ChunkMetaData> chunkMetaDatas;
+  private List<ChunkMetaData> chunkMetaDataList;
 
   /**
    * Mem chunk data. Only be set in a temporal TsFileResource in a query process.
@@ -67,6 +71,8 @@ public class TsFileResource {
   private ReadOnlyMemChunk readOnlyMemChunk;
 
   private ReentrantReadWriteLock mergeQueryLock = new ReentrantReadWriteLock();
+
+  private FSFactory fsFactory = FSFactoryProducer.getFSFactory();
 
   public TsFileResource(File file) {
     this.file = file;
@@ -95,16 +101,16 @@ public class TsFileResource {
       Map<Long, Long> startTimeMap,
       Map<Long, Long> endTimeMap,
       ReadOnlyMemChunk readOnlyMemChunk,
-      List<ChunkMetaData> chunkMetaDatas) {
+      List<ChunkMetaData> chunkMetaDataList) {
     this.file = file;
     this.startTimeMap = startTimeMap;
     this.endTimeMap = endTimeMap;
-    this.chunkMetaDatas = chunkMetaDatas;
+    this.chunkMetaDataList = chunkMetaDataList;
     this.readOnlyMemChunk = readOnlyMemChunk;
   }
 
   public void serialize() throws IOException {
-    try (OutputStream outputStream = TSFileFactory.INSTANCE.getBufferedOutputStream(
+    try (OutputStream outputStream = fsFactory.getBufferedOutputStream(
         file + RESOURCE_SUFFIX + TEMP_SUFFIX)) {
       ReadWriteIOUtils.write(this.startTimeMap.size(), outputStream);
       for (Entry<Long, Long> entry : this.startTimeMap.entrySet()) {
@@ -117,14 +123,14 @@ public class TsFileResource {
         ReadWriteIOUtils.write(entry.getValue(), outputStream);
       }
     }
-    File src = TSFileFactory.INSTANCE.getFile(file + RESOURCE_SUFFIX + TEMP_SUFFIX);
-    File dest = TSFileFactory.INSTANCE.getFile(file + RESOURCE_SUFFIX);
+    File src = fsFactory.getFile(file + RESOURCE_SUFFIX + TEMP_SUFFIX);
+    File dest = fsFactory.getFile(file + RESOURCE_SUFFIX);
     dest.delete();
-    TSFileFactory.INSTANCE.moveFile(src, dest);
+    fsFactory.moveFile(src, dest);
   }
 
   public void deSerialize() throws IOException {
-    try (InputStream inputStream = TSFileFactory.INSTANCE.getBufferedInputStream(
+    try (InputStream inputStream = fsFactory.getBufferedInputStream(
         file + RESOURCE_SUFFIX)) {
       int size = ReadWriteIOUtils.readInt(inputStream);
       Map<Long, Long> startTimes = new HashMap<>();
@@ -160,15 +166,15 @@ public class TsFileResource {
   }
 
   public boolean fileExists() {
-    return TSFileFactory.INSTANCE.getFile(file + RESOURCE_SUFFIX).exists();
+    return fsFactory.getFile(file + RESOURCE_SUFFIX).exists();
   }
 
   public void forceUpdateEndTime(Long device, long time) {
       endTimeMap.put(device, time);
   }
 
-  public List<ChunkMetaData> getChunkMetaDatas() {
-    return chunkMetaDatas;
+  public List<ChunkMetaData> getChunkMetaDataList() {
+    return chunkMetaDataList;
   }
 
   public ReadOnlyMemChunk getReadOnlyMemChunk() {
@@ -182,8 +188,12 @@ public class TsFileResource {
     return modFile;
   }
 
-  public boolean containsDevice(String devicePath) {
-    return startTimeMap.containsKey(devicePath);
+  public void setFile(File file) {
+    this.file = file;
+  }
+
+  public boolean containsDevice(Long deviceId) {
+    return startTimeMap.containsKey(deviceId);
   }
 
   public File getFile() {
@@ -217,7 +227,7 @@ public class TsFileResource {
       modFile = null;
     }
     processor = null;
-    chunkMetaDatas = null;
+    chunkMetaDataList = null;
   }
 
   public TsFileProcessor getUnsealedFileProcessor() {
@@ -235,8 +245,8 @@ public class TsFileResource {
 
   public void remove() {
     file.delete();
-    TSFileFactory.INSTANCE.getFile(file.getPath() + RESOURCE_SUFFIX).delete();
-    TSFileFactory.INSTANCE.getFile(file.getPath() + ModificationFile.FILE_SUFFIX).delete();
+    fsFactory.getFile(file.getPath() + RESOURCE_SUFFIX).delete();
+    fsFactory.getFile(file.getPath() + ModificationFile.FILE_SUFFIX).delete();
   }
 
   @Override
@@ -263,5 +273,38 @@ public class TsFileResource {
 
   public void setClosed(boolean closed) {
     this.closed = closed;
+  }
+
+  public boolean isDeleted() {
+    return deleted;
+  }
+
+  public void setDeleted(boolean deleted) {
+    this.deleted = deleted;
+  }
+
+  public boolean isMerging() {
+    return isMerging;
+  }
+
+  public void setMerging(boolean merging) {
+    isMerging = merging;
+  }
+
+  /**
+   * check if any of the device lives over the given time bound
+   * @param timeLowerBound
+   */
+  public boolean stillLives(long timeLowerBound) {
+    if (timeLowerBound == Long.MAX_VALUE) {
+      return true;
+    }
+    for (long endTime : endTimeMap.values()) {
+      // the file cannot be deleted if any device still lives
+      if (endTime >= timeLowerBound) {
+        return true;
+      }
+    }
+    return false;
   }
 }

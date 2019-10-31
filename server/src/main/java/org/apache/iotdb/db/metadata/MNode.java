@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -51,6 +52,15 @@ public class MNode implements Serializable {
   private MeasurementSchema schema;
   private MNode parent;
   private Map<String, MNode> children;
+
+  private String fullPath;
+
+  /**
+   * when the data in a storage group is older than dataTTL, it is considered invalid and will
+   * be eventually removed.
+   * only set at storage group level.
+   */
+  private long dataTTL = Long.MAX_VALUE;
 
   /**
    * Constructor of non-leaf MNode.
@@ -209,5 +219,26 @@ public class MNode implements Serializable {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public long getDataTTL() {
+    return dataTTL;
+  }
+
+  public void setDataTTL(long dataTTL) {
+    this.dataTTL = dataTTL;
+  }
+
+  public String getFullPath() {
+    if (fullPath != null) {
+      return fullPath;
+    }
+    StringBuilder builder = new StringBuilder(name);
+    MNode curr = this;
+    while (curr.parent != null) {
+      curr = curr.parent;
+      builder.insert(0, IoTDBConstant.PATH_SEPARATOR).insert(0, curr.name);
+    }
+    return fullPath = builder.toString();
   }
 }

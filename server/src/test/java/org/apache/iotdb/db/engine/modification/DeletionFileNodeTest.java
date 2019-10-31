@@ -19,7 +19,6 @@
 
 package org.apache.iotdb.db.engine.modification;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.apache.iotdb.db.utils.EnvironmentUtils.TEST_QUERY_CONTEXT;
 import static org.apache.iotdb.db.utils.EnvironmentUtils.TEST_QUERY_JOB_ID;
 import static org.junit.Assert.assertEquals;
@@ -29,15 +28,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import junit.framework.TestCase;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.modification.io.LocalTextModificationAccessor;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
-import org.apache.iotdb.db.exception.StorageEngineException;
-import org.apache.iotdb.db.exception.MetadataErrorException;
-import org.apache.iotdb.db.exception.PathErrorException;
-import org.apache.iotdb.db.exception.ProcessorException;
-import org.apache.iotdb.db.exception.StartupException;
+import org.apache.iotdb.db.exception.*;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.control.QueryResourceManager;
@@ -71,7 +67,7 @@ public class DeletionFileNodeTest {
 
   @Before
   public void setup() throws MetadataErrorException,
-      PathErrorException, IOException, StorageEngineException, StartupException {
+      PathErrorException, IOException, StorageEngineException, StartupException, StorageGroupException {
     EnvironmentUtils.envSetUp();
 
     MManager.getInstance().setStorageGroupToMTree(processorName);
@@ -124,7 +120,8 @@ public class DeletionFileNodeTest {
   }
 
   @Test
-  public void testDeleteInBufferWriteFile() throws StorageEngineException, IOException, PathErrorException {
+  public void testDeleteInBufferWriteFile()
+      throws StorageEngineException, IOException, PathErrorException {
     for (int i = 1; i <= 100; i++) {
       TSRecord record = new TSRecord(i, processorName);
       for (int j = 0; j < 10; j++) {
@@ -156,7 +153,7 @@ public class DeletionFileNodeTest {
       assertEquals(3, modifications.size());
       int i = 0;
       for (Modification modification : modifications) {
-        assertTrue(modification.equals(realModifications[i++]));
+        TestCase.assertEquals(modification, realModifications[i++]);
       }
     } finally {
       accessor.close();
@@ -164,7 +161,8 @@ public class DeletionFileNodeTest {
   }
 
   @Test
-  public void testDeleteInOverflowCache() throws StorageEngineException, ProcessorException, PathErrorException {
+  public void testDeleteInOverflowCache()
+      throws StorageEngineException, ProcessorException, PathErrorException {
     // insert sequence data
     for (int i = 101; i <= 200; i++) {
       TSRecord record = new TSRecord(i, processorName);
@@ -208,7 +206,8 @@ public class DeletionFileNodeTest {
   }
 
   @Test
-  public void testDeleteInOverflowFile() throws StorageEngineException, IOException, PathErrorException {
+  public void testDeleteInOverflowFile()
+      throws StorageEngineException, PathErrorException {
     // insert into BufferWrite
     for (int i = 101; i <= 200; i++) {
       TSRecord record = new TSRecord(i, processorName);
@@ -250,7 +249,7 @@ public class DeletionFileNodeTest {
     assertEquals( 3, modifications.size());
     int i = 0;
     for (Modification modification : modifications) {
-      assertTrue(modification.equals(realModifications[i++]));
+      TestCase.assertEquals(modification, realModifications[i++]);
     }
   }
 }

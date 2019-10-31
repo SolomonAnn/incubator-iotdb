@@ -21,22 +21,17 @@ package org.apache.iotdb.db.engine.storagegroup;
 import static org.junit.Assert.assertFalse;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.ArrayList;
-
 import org.apache.iotdb.db.engine.MetadataManagerHelper;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.querycontext.QueryDataSource;
-
-import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.exception.ProcessorException;
 import org.apache.iotdb.db.exception.qp.QueryProcessorException;
 import org.apache.iotdb.db.qp.physical.crud.BatchInsertPlan;
-
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.query.context.QueryContext;
-import org.apache.iotdb.db.query.control.JobFileManager;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
@@ -74,7 +69,7 @@ public class StorageGroupProcessorTest {
 
 
   @Test
-  public void testSequenceSyncClose() throws PathErrorException, QueryProcessorException {
+  public void testSequenceSyncClose() throws QueryProcessorException {
     for (int j = 1; j <= 10; j++) {
       TSRecord record = new TSRecord(j, devicePath);
       record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementPath, String.valueOf(j)));
@@ -93,7 +88,7 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
-  public void testIoTDBRowBatchWriteAndSyncClose() throws PathErrorException, QueryProcessorException {
+  public void testIoTDBRowBatchWriteAndSyncClose() throws QueryProcessorException {
 
     String[] measurements = new String[2];
     measurements[0] = "s0";
@@ -148,7 +143,7 @@ public class StorageGroupProcessorTest {
 
 
   @Test
-  public void testSeqAndUnSeqSyncClose() throws PathErrorException, QueryProcessorException {
+  public void testSeqAndUnSeqSyncClose() throws QueryProcessorException {
 
     for (int j = 21; j <= 30; j++) {
       TSRecord record = new TSRecord(j, devicePath);
@@ -180,7 +175,7 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
-  public void testMerge() throws PathErrorException, QueryProcessorException {
+  public void testMerge() throws QueryProcessorException {
 
     mergeLock = new AtomicLong(0);
     for (int j = 21; j <= 30; j++) {
@@ -218,7 +213,7 @@ public class StorageGroupProcessorTest {
 
   class DummySGP extends StorageGroupProcessor {
 
-    DummySGP(String systemInfoDir, String storageGroupName) throws ProcessorException, PathErrorException {
+    DummySGP(String systemInfoDir, String storageGroupName) throws ProcessorException {
       super(systemInfoDir, storageGroupName);
     }
 

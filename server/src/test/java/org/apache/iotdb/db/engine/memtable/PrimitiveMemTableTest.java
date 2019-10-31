@@ -82,7 +82,7 @@ public class PrimitiveMemTableTest {
       memTable.write(devicePath, measurementPaths[0], TSDataType.INT32, i, String.valueOf(i));
     }
     Iterator<TimeValuePair> tvPair = memTable
-        .query(devicePath, measurementPaths[0], TSDataType.INT32, Collections.emptyMap())
+        .query(devicePath, measurementPaths[0], TSDataType.INT32, Collections.emptyMap(), Long.MIN_VALUE)
         .getSortedTimeValuePairList().iterator();
     for (int i = 0; i < dataSize; i++) {
       TimeValuePair timeValuePair = tvPair.next();
@@ -100,7 +100,7 @@ public class PrimitiveMemTableTest {
           ret[i].getValue().getStringValue());
     }
     Iterator<TimeValuePair> tvPair = memTable
-        .query(devicePath, sensorId, dataType, Collections.emptyMap())
+        .query(devicePath, sensorId, dataType, Collections.emptyMap(), Long.MIN_VALUE)
         .getSortedTimeValuePairList()
         .iterator();
     Arrays.sort(ret);

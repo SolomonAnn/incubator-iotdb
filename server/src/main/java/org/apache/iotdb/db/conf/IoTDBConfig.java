@@ -29,6 +29,7 @@ import org.apache.iotdb.db.engine.merge.selector.MergeFileStrategy;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.service.TSServiceImpl;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.fileSystem.FSType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +37,15 @@ import org.slf4j.LoggerFactory;
 public class IoTDBConfig {
 
   private static final Logger logger = LoggerFactory.getLogger(IoTDBConfig.class);
-  public static final String CONFIG_NAME = "iotdb-engine.properties";
+  static final String CONFIG_NAME = "iotdb-engine.properties";
   private static final String MULTI_DIR_STRATEGY_PREFIX =
       "org.apache.iotdb.db.conf.directories.strategy.";
   private static final String DEFAULT_MULTI_DIR_STRATEGY = "MaxDiskUsableSpaceFirstStrategy";
+  
+  /**
+   * Port which the metrics service listens to.
+   */
+  private int metricsPort = 8181;
 
   /* Names of Watermark methods */
   public static final String WATERMARK_GROUPED_LSB = "GroupBasedLSBMethod";
@@ -120,6 +126,11 @@ public class IoTDBConfig {
    * Schema directory, including storage set of values.
    */
   private String schemaDir = "data/system/schema";
+
+  /**
+   * Query directory, stores temporary files of query
+   */
+  private String queryDir = "data/query";
 
   /**
    * Data directory of data. It can be settled as dataDirs = {"data1", "data2", "data3"};
@@ -207,6 +218,17 @@ public class IoTDBConfig {
   private int mManagerCacheSize = 400000;
 
   /**
+   * Is external sort enable.
+   */
+  private boolean enableExternalSort = true;
+
+  /**
+   * The threshold of items in external sort. If the number of chunks participating in sorting
+   * exceeds this threshold, external sorting is enabled, otherwise memory sorting is used.
+   */
+  private int externalSortThreshold = 60;
+
+  /**
    * Is this IoTDB instance a receiver of sync or not.
    */
   private boolean isSyncEnable = true;
@@ -218,12 +240,6 @@ public class IoTDBConfig {
    * Set the language version when loading file including error information, default value is "EN"
    */
   private String languageVersion = "EN";
-  /**
-   * Choose a postBack strategy of merging historical data: 1. It's more likely to update historical
-   * data, choose "true". 2. It's more likely not to update historical data or you don't know
-   * exactly, choose "false".
-   */
-  private boolean updateHistoricalDataPossibility = false;
 
   private String ipWhiteList = "0.0.0.0/0";
   /**
@@ -276,6 +292,36 @@ public class IoTDBConfig {
   private String watermarkMethod = "GroupBasedLSBMethod(embed_row_cycle=5,embed_lsb_num=5)";
 
   /**
+   * Switch of creating schema automatically
+   */
+  private boolean enableAutoCreateSchema = false;
+
+  /**
+   * Storage group level when creating schema automatically is enabled
+   */
+  private int defaultStorageGroupLevel = 2;
+
+  /**
+   * Boolean encoding when creating schema automatically is enabled
+   */
+  private TSEncoding defaultBooleanEncoding = TSEncoding.RLE;
+
+  /**
+   * Long encoding when creating schema automatically is enabled
+   */
+  private TSEncoding defaultLongEncoding = TSEncoding.RLE;
+
+  /**
+   * Double encoding when creating schema automatically is enabled
+   */
+  private TSEncoding defaultDoubleEncoding = TSEncoding.GORILLA;
+
+  /**
+   * String encoding when creating schema automatically is enabled
+   */
+  private TSEncoding defaultStringEncoding = TSEncoding.PLAIN;
+
+  /**
    * How much memory (in byte) can be used by a single merge task.
    */
   private long mergeMemoryBudget = (long) (Runtime.getRuntime().maxMemory() * 0.2);
@@ -292,8 +338,7 @@ public class IoTDBConfig {
 
   /**
    * If one merge file selection runs for more than this time, it will be ended and its current
-   * selection will be used as final selection. Unit: millis.
-   * When < 0, it means time is unbounded.
+   * selection will be used as final selection. Unit: millis. When < 0, it means time is unbounded.
    */
   private long mergeFileSelectionTimeBudget = 30 * 1000;
 
@@ -346,6 +391,13 @@ public class IoTDBConfig {
    */
   private String hdfsPort = "9000";
 
+  /**
+   * default TTL for storage groups that are not set TTL by statements, in ms
+   * Notice: if this property is changed, previous created storage group which are not set TTL will
+   * also be affected.
+   */
+  private long defaultTTL = Long.MAX_VALUE;
+
   public IoTDBConfig() {
     // empty constructor
   }
@@ -370,6 +422,7 @@ public class IoTDBConfig {
     dirs.add(schemaDir);
     dirs.add(walFolder);
     dirs.add(indexFileDir);
+    dirs.add(queryDir);
     dirs.addAll(Arrays.asList(dataDirs));
 
     for (int i = 0; i < 4; i++) {
@@ -394,8 +447,9 @@ public class IoTDBConfig {
     schemaDir = dirs.get(2);
     walFolder = dirs.get(3);
     indexFileDir = dirs.get(4);
+    queryDir = dirs.get(5);
     for (int i = 0; i < dataDirs.length; i++) {
-      dataDirs[i] = dirs.get(i + 5);
+      dataDirs[i] = dirs.get(i + 6);
     }
   }
 
@@ -433,6 +487,14 @@ public class IoTDBConfig {
     return dataDirs;
   }
 
+  public int getMetricsPort() {
+    return metricsPort;
+  }
+
+  public void setMetricsPort(int metricsPort) {
+    this.metricsPort = metricsPort;
+  }
+  
   public String getRpcAddress() {
     return rpcAddress;
   }
@@ -495,6 +557,14 @@ public class IoTDBConfig {
 
   void setSchemaDir(String schemaDir) {
     this.schemaDir = schemaDir;
+  }
+
+  public String getQueryDir() {
+    return queryDir;
+  }
+
+  public void setQueryDir(String queryDir) {
+    this.queryDir = queryDir;
   }
 
   public String getWalFolder() {
@@ -633,14 +703,6 @@ public class IoTDBConfig {
     this.languageVersion = languageVersion;
   }
 
-  public boolean isUpdateHistoricalDataPossibility() {
-    return updateHistoricalDataPossibility;
-  }
-
-  void setUpdateHistoricalDataPossibility(boolean updateHistoricalDataPossibility) {
-    this.updateHistoricalDataPossibility = updateHistoricalDataPossibility;
-  }
-
   public String getBaseDir() {
     return baseDir;
   }
@@ -753,6 +815,22 @@ public class IoTDBConfig {
     this.allocateMemoryForRead = allocateMemoryForRead;
   }
 
+  public boolean isEnableExternalSort() {
+    return enableExternalSort;
+  }
+
+  public void setEnableExternalSort(boolean enableExternalSort) {
+    this.enableExternalSort = enableExternalSort;
+  }
+
+  public int getExternalSortThreshold() {
+    return externalSortThreshold;
+  }
+
+  public void setExternalSortThreshold(int externalSortThreshold) {
+    this.externalSortThreshold = externalSortThreshold;
+  }
+
   public boolean isEnablePerformanceStat() {
     return enablePerformanceStat;
   }
@@ -825,7 +903,6 @@ public class IoTDBConfig {
   public void setMergeFileSelectionTimeBudget(long mergeFileSelectionTimeBudget) {
     this.mergeFileSelectionTimeBudget = mergeFileSelectionTimeBudget;
   }
-
   public boolean isRpcThriftCompressionEnable() {
     return rpcThriftCompressionEnable;
   }
@@ -920,6 +997,70 @@ public class IoTDBConfig {
     return null;
   }
 
+  public boolean isAutoCreateSchemaEnabled() {
+    return enableAutoCreateSchema;
+  }
+
+  public void setAutoCreateSchemaEnabled(boolean enableAutoCreateSchema) {
+    this.enableAutoCreateSchema = enableAutoCreateSchema;
+  }
+
+  public int getDefaultStorageGroupLevel() {
+    return defaultStorageGroupLevel;
+  }
+
+  public void setDefaultStorageGroupLevel(int defaultStorageGroupLevel) {
+    this.defaultStorageGroupLevel = defaultStorageGroupLevel;
+  }
+
+  public TSEncoding getDefaultBooleanEncoding() {
+    return defaultBooleanEncoding;
+  }
+
+  public void setDefaultBooleanEncoding(TSEncoding defaultBooleanEncoding) {
+    this.defaultBooleanEncoding = defaultBooleanEncoding;
+  }
+
+  public void setDefaultBooleanEncoding(String defaultBooleanEncoding) {
+    this.defaultBooleanEncoding = TSEncoding.valueOf(defaultBooleanEncoding);
+  }
+
+  public TSEncoding getDefaultLongEncoding() {
+    return defaultLongEncoding;
+  }
+
+  public void setDefaultLongEncoding(TSEncoding defaultLongEncoding) {
+    this.defaultLongEncoding = defaultLongEncoding;
+  }
+
+  public void setDefaultLongEncoding(String defaultLongEncoding) {
+    this.defaultLongEncoding = TSEncoding.valueOf(defaultLongEncoding);
+  }
+
+  public TSEncoding getDefaultDoubleEncoding() {
+    return defaultDoubleEncoding;
+  }
+
+  public void setDefaultDoubleEncoding(TSEncoding defaultDoubleEncoding) {
+    this.defaultDoubleEncoding = defaultDoubleEncoding;
+  }
+
+  public void setDefaultDoubleEncoding(String defaultDoubleEncoding) {
+    this.defaultDoubleEncoding = TSEncoding.valueOf(defaultDoubleEncoding);
+  }
+
+  public TSEncoding getDefaultStringEncoding() {
+    return defaultStringEncoding;
+  }
+
+  public void setDefaultStringEncoding(TSEncoding defaultStringEncoding) {
+    this.defaultStringEncoding = defaultStringEncoding;
+  }
+
+  public void setDefaultStringEncoding(String defaultStringEncoding) {
+    this.defaultStringEncoding = TSEncoding.valueOf(defaultStringEncoding);
+  }
+
   public FSType getSystemFileStorageFs() {
     return systemFileStorageFs;
   }
@@ -950,5 +1091,13 @@ public class IoTDBConfig {
 
   public void setHdfsPort(String hdfsPort) {
     this.hdfsPort = hdfsPort;
+  }
+
+  public long getDefaultTTL() {
+    return defaultTTL;
+  }
+
+  public void setDefaultTTL(long defaultTTL) {
+    this.defaultTTL = defaultTTL;
   }
 }

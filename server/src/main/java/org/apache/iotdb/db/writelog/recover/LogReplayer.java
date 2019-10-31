@@ -42,7 +42,7 @@ import org.apache.iotdb.db.writelog.io.ILogReader;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.fileSystem.TSFileFactory;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.schema.Schema;
 
@@ -88,7 +88,7 @@ public class LogReplayer {
    */
   public void replayLogs() throws ProcessorException, PathErrorException {
     WriteLogNode logNode = MultiFileLogNodeManager.getInstance().getNode(
-        logNodePrefix + TSFileFactory.INSTANCE.getFile(insertFilePath).getName());
+        logNodePrefix + FSFactoryProducer.getFSFactory().getFile(insertFilePath).getName());
 
     ILogReader logReader = logNode.getLogReader();
     try {

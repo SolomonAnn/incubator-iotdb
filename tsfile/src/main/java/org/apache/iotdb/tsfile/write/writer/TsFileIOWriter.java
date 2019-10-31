@@ -46,7 +46,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
-import org.apache.iotdb.tsfile.fileSystem.FileOutputFactory;
+import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.utils.BytesUtils;
@@ -63,25 +63,24 @@ import org.slf4j.LoggerFactory;
 public class TsFileIOWriter {
 
   public static final byte[] magicStringBytes;
-  private static final Logger logger = LoggerFactory.getLogger(TsFileIOWriter.class);
+  public static final byte[] versionNumberBytes;
   protected static final TSFileConfig config = TSFileDescriptor.getInstance().getConfig();
+  private static final Logger logger = LoggerFactory.getLogger(TsFileIOWriter.class);
 
   static {
     magicStringBytes = BytesUtils.stringToBytes(TSFileConfig.MAGIC_STRING);
+    versionNumberBytes = TSFileConfig.VERSION_NUMBER.getBytes();
   }
 
   protected TsFileOutput out;
   protected List<ChunkGroupMetaData> chunkGroupMetaDataList = new ArrayList<>();
-  private ChunkGroupMetaData currentChunkGroupMetaData;
-  private ChunkMetaData currentChunkMetaData;
   protected boolean canWrite = true;
-
-  private long markedPosition;
-
   protected int totalChunkNum = 0;
   protected int invalidChunkNum;
-
   protected File file;
+  private ChunkGroupMetaData currentChunkGroupMetaData;
+  private ChunkMetaData currentChunkMetaData;
+  private long markedPosition;
 
   /**
    * empty construct function.
@@ -121,7 +120,8 @@ public class TsFileIOWriter {
    */
   public TsFileIOWriter(TsFileOutput out, List<ChunkGroupMetaData> chunkGroupMetaDataList)
       throws IOException {
-    this.out = FileOutputFactory.INSTANCE.getTsFileOutput(file.getPath(), false); //NOTE overwrite false here
+    this.out = FSFactoryProducer.getFileOutputFactory()
+        .getTsFileOutput(file.getPath(), false); //NOTE overwrite false here
     this.chunkGroupMetaDataList = chunkGroupMetaDataList;
     if (chunkGroupMetaDataList.isEmpty()) {
       startFile();
@@ -141,6 +141,7 @@ public class TsFileIOWriter {
 
   protected void startFile() throws IOException {
     out.write(magicStringBytes);
+    out.write(versionNumberBytes);
   }
 
   /**
@@ -219,7 +220,6 @@ public class TsFileIOWriter {
 
   /**
    * Write a whole chunk in another file into this file. Providing fast merge for IoTDB.
-   * @param chunk
    */
   public void writeChunk(Chunk chunk, ChunkMetaData chunkMetadata) throws IOException {
     ChunkHeader chunkHeader = chunk.getHeader();
@@ -242,7 +242,7 @@ public class TsFileIOWriter {
     currentChunkGroupMetaData.addTimeSeriesChunkMetaData(currentChunkMetaData);
     logger.debug("end series chunk:{},totalvalue:{}", currentChunkMetaData, totalValueCount);
     currentChunkMetaData = null;
-    totalChunkNum ++;
+    totalChunkNum++;
   }
 
   /**
@@ -263,8 +263,8 @@ public class TsFileIOWriter {
     Map<String, TsDeviceMetadataIndex> tsDeviceMetadataIndexMap = flushTsDeviceMetaDataAndGetIndex(
         this.chunkGroupMetaDataList);
 
-    TsFileMetaData tsFileMetaData = new TsFileMetaData(tsDeviceMetadataIndexMap, schemaDescriptors,
-        TSFileConfig.CURRENT_VERSION);
+    TsFileMetaData tsFileMetaData = new TsFileMetaData(tsDeviceMetadataIndexMap, schemaDescriptors);
+
     tsFileMetaData.setTotalChunkNum(totalChunkNum);
     tsFileMetaData.setInvalidChunkNum(invalidChunkNum);
 
@@ -273,7 +273,15 @@ public class TsFileIOWriter {
 
     // write TsFileMetaData
     int size = tsFileMetaData.serializeTo(out.wrapAsStream());
-    logger.debug("finish flushing the footer {}, file pos:{}", tsFileMetaData, out.getPosition());
+    if (logger.isDebugEnabled()) {
+      logger.debug("finish flushing the footer {}, file pos:{}", tsFileMetaData, out.getPosition());
+    }
+
+    // write bloom filter
+    size += tsFileMetaData.serializeBloomFilter(out.wrapAsStream(), chunkGroupMetaDataList);
+    if (logger.isDebugEnabled()) {
+      logger.debug("finish flushing the bloom filter file pos:{}", out.getPosition());
+    }
 
     // write TsFileMetaData size
     ReadWriteIOUtils.write(size, out.wrapAsStream());// write the size of the file metadata.
@@ -415,7 +423,6 @@ public class TsFileIOWriter {
 
   /**
    * Remove such ChunkMetadata that its startTime is not in chunkStartTimes
-   * @param chunkStartTimes
    */
   public void filterChunks(Map<Path, List<Long>> chunkStartTimes) {
     Map<Path, Integer> startTimeIdxes = new HashMap<>();
@@ -451,6 +458,7 @@ public class TsFileIOWriter {
 
   /**
    * this function is only for Test.
+   *
    * @return TsFileOutput
    */
   public TsFileOutput getIOWriterOut() {

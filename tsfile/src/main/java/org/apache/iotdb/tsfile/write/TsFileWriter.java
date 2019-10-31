@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.tsfile.write;
 
+
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -37,6 +38,11 @@ import org.apache.iotdb.tsfile.write.writer.TsFileIOWriter;
 import org.apache.iotdb.tsfile.write.writer.TsFileOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * TsFileWriter is the entrance for writing processing. It receives a record and send it to

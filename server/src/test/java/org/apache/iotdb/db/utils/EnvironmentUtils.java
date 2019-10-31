@@ -32,6 +32,7 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.cache.DeviceMetaDataCache;
 import org.apache.iotdb.db.engine.cache.TsFileMetaDataCache;
 import org.apache.iotdb.db.engine.flush.FlushManager;
+import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.metadata.MManager;
@@ -90,6 +91,9 @@ public class EnvironmentUtils {
     }
     // close metadata
     MManager.getInstance().clear();
+
+    MergeManager.getINSTANCE().stop();
+
     // delete all directory
     cleanAllDir();
 
@@ -114,6 +118,8 @@ public class EnvironmentUtils {
     cleanDir(config.getWalFolder());
     // delete index
     cleanDir(config.getIndexFileDir());
+    // delete query
+    cleanDir(config.getQueryDir());
     cleanDir(config.getBaseDir());
     // delete data files
     for (String dataDir : config.getDataDirs()) {
@@ -126,16 +132,14 @@ public class EnvironmentUtils {
   }
 
   /**
-   * disable the system monitor</br>
-   * this function should be called before all code in the setup
+   * disable the system monitor</br> this function should be called before all code in the setup
    */
   public static void closeStatMonitor() {
     config.setEnableStatMonitor(false);
   }
 
   /**
-   * disable memory control</br>
-   * this function should be called before all code in the setup
+   * disable memory control</br> this function should be called before all code in the setup
    */
   public static void envSetUp() throws StartupException, IOException {
     IoTDBDescriptor.getInstance().getConfig().setEnableParameterAdapter(false);
@@ -159,6 +163,7 @@ public class EnvironmentUtils {
     StorageEngine.getInstance().reset();
     MultiFileLogNodeManager.getInstance().start();
     FlushManager.getInstance().start();
+    MergeManager.getINSTANCE().start();
     TEST_QUERY_JOB_ID = QueryResourceManager.getInstance().assignJobId();
     TEST_QUERY_CONTEXT = new QueryContext(TEST_QUERY_JOB_ID);
   }
@@ -178,8 +183,10 @@ public class EnvironmentUtils {
     createDir(config.getWalFolder());
     // create index
     createDir(config.getIndexFileDir());
+    // create query
+    createDir(config.getQueryDir());
     // create data
-    for (String dataDir: config.getDataDirs()) {
+    for (String dataDir : config.getDataDirs()) {
       createDir(dataDir);
     }
   }
