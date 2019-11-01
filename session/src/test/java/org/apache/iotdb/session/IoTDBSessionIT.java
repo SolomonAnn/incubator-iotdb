@@ -84,7 +84,7 @@ public class IoTDBSessionIT {
     insert_via_sql();
     query3();
 
-//    insertRowBatchTest1();
+//    insertRowBatchTest();
     deleteData();
 
     query();
@@ -106,7 +106,7 @@ public class IoTDBSessionIT {
 
     // set storage group but do not create timeseries
     session.setStorageGroup("root.sg3");
-    insertRowBatchTest1("root.sg3.d1");
+    insertRowBatchTest("root.sg3.d1");
 
     // create timeseries but do not set storage group
     session.createTimeseries("root.sg4.d1.s1", TSDataType.INT64, TSEncoding.RLE,
@@ -115,10 +115,10 @@ public class IoTDBSessionIT {
         CompressionType.SNAPPY);
     session.createTimeseries("root.sg4.d1.s3", TSDataType.INT64, TSEncoding.RLE,
         CompressionType.SNAPPY);
-    insertRowBatchTest1("root.sg4.d1");
+    insertRowBatchTest("root.sg4.d1");
 
     // do not set storage group and create timeseries
-    insertRowBatchTest1("root.sg5.d1");
+    insertRowBatchTest("root.sg5.d1");
 
     conf.setAutoCreateSchemaEnabled(false);
 
@@ -149,7 +149,7 @@ public class IoTDBSessionIT {
     }
   }
 
-  private void insertRowBatchTest1(String deviceId) throws IoTDBSessionException {
+  private void insertRowBatchTest(String deviceId) throws IoTDBSessionException {
     Schema schema = new Schema();
     schema.registerMeasurement(new MeasurementSchema("s1", TSDataType.INT64, TSEncoding.RLE));
     schema.registerMeasurement(new MeasurementSchema("s2", TSDataType.INT64, TSEncoding.RLE));
