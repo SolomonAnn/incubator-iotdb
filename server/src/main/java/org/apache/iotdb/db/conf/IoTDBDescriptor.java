@@ -294,6 +294,10 @@ public class IoTDBDescriptor {
       conf.setDefaultTTL(Long.parseLong(properties.getProperty("default_ttl",
           String.valueOf(conf.getDefaultTTL()))));
 
+      conf.setDefaultSequentialDataRatio(Float.parseFloat(properties.getProperty(
+          "default_sequential_data_ratio",
+          String.valueOf(conf.getDefaultSequentialDataRatio()))));
+
       // At the same time, set TSFileConfig
       TSFileDescriptor.getInstance().getConfig()
           .setTSFileStorageFs(properties.getProperty("tsfile_storage_fs"));

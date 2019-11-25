@@ -446,7 +446,7 @@ public class IoTDBConfig {
   private String kerberosKeytabFilePath = "/path";
 
   /**
-   * kerberos pricipal
+   * kerberos principal
    */
   private String kerberosPrincipal = "principal";
 
@@ -456,6 +456,11 @@ public class IoTDBConfig {
    * also be affected.
    */
   private long defaultTTL = Long.MAX_VALUE;
+
+  /**
+   * default ratio of sequential and unsequential data in the sequential memtable
+   */
+  private float defaultSequentialDataRatio = 0.8f;
 
   public IoTDBConfig() {
     // empty constructor
@@ -1270,5 +1275,13 @@ public class IoTDBConfig {
 
   public void setDefaultTTL(long defaultTTL) {
     this.defaultTTL = defaultTTL;
+  }
+
+  public float getDefaultSequentialDataRatio() {
+    return defaultSequentialDataRatio;
+  }
+
+  public void setDefaultSequentialDataRatio(float defaultSequentialDataRatio) {
+    this.defaultSequentialDataRatio = defaultSequentialDataRatio;
   }
 }

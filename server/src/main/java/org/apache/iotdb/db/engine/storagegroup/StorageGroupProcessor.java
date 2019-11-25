@@ -137,6 +137,8 @@ public class StorageGroupProcessor {
   // includes sealed and unsealed sequence TsFiles
   private List<TsFileResource> sequenceFileList = new ArrayList<>();
   private TsFileProcessor workSequenceTsFileProcessor = null;
+  // the TsFileProcessor to be flushed whose memtable has been filled up
+  private TsFileProcessor filledSequenceTsFileProcessor = null;
   private CopyOnReadLinkedList<TsFileProcessor> closingSequenceTsFileProcessor = new CopyOnReadLinkedList<>();
   // includes sealed and unsealed unSequence TsFiles
   private List<TsFileResource> unSequenceFileList = new ArrayList<>();
@@ -155,6 +157,12 @@ public class StorageGroupProcessor {
    * device's latestFlushedTime should go into an unsequential file.
    */
   private Map<String, Long> latestFlushedTimeForEachDevice = new HashMap<>();
+  /**
+   * device -> largest timestamp of the latest filled memtable to be submitted to asyncTryToFlush
+   * latestFilledTimeForEachDevice determines whether a data point should be put into the next
+   * memtable or the buffer of the latest filled memtable.
+   */
+  private Map<String, Long> latestFilledTimeForEachDevice = new HashMap<>();
   private String storageGroupName;
   private File storageGroupSysDir;
   /**
@@ -360,6 +368,7 @@ public class StorageGroupProcessor {
       // init map
       latestTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
       latestFlushedTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
+      latestFilledTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
 
       // insert to sequence or unSequence file
       insertToTsFileProcessor(insertPlan,
@@ -480,6 +489,10 @@ public class StorageGroupProcessor {
         tsFileProcessor.asyncFlush();
       }
     }
+  }
+
+  private void insertToBuffer(InsertPlan insertPlan) {
+
   }
 
   private TsFileProcessor getOrCreateTsFileProcessor(boolean sequence) {
