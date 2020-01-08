@@ -138,7 +138,7 @@ public class StorageGroupProcessor {
   // includes sealed and unsealed sequence TsFiles
   private List<TsFileResource> sequenceFileList = new ArrayList<>();
   private TsFileProcessor workSequenceTsFileProcessor = null;
-  // the TsFileProcessor to be flushed whose memtable has been filled up
+  // the TsFileProcessor to be flushed whose memtable has been filled up with sequential data
   private TsFileProcessor filledSequenceTsFileProcessor = null;
   private CopyOnReadLinkedList<TsFileProcessor> closingSequenceTsFileProcessor = new CopyOnReadLinkedList<>();
   // includes sealed and unsealed unSequence TsFiles
@@ -159,9 +159,9 @@ public class StorageGroupProcessor {
    */
   private Map<String, Long> latestFlushedTimeForEachDevice = new HashMap<>();
   /**
-   * device -> largest timestamp of the latest filled memtable to be submitted to asyncTryToFlush
+   * device -> largest timestamp of the latest filled memtable
    * latestFilledTimeForEachDevice determines whether a data point should be put into the next
-   * memtable or the buffer of the latest filled memtable.
+   * memtable or the latest filled memtable.
    */
   private Map<String, Long> latestFilledTimeForEachDevice = new HashMap<>();
   private String storageGroupName;
@@ -491,7 +491,12 @@ public class StorageGroupProcessor {
     TsFileProcessor tsFileProcessor;
     boolean result;
 
-    tsFileProcessor = getOrCreateTsFileProcessor(sequence);
+    if (filledSequenceTsFileProcessor != null && sequence &&
+        insertPlan.getTime() < latestFilledTimeForEachDevice.get(insertPlan.getDeviceId())) {
+      tsFileProcessor = filledSequenceTsFileProcessor;
+    }else {
+      tsFileProcessor = getOrCreateTsFileProcessor(sequence);
+    }
 
     if (tsFileProcessor == null) {
       return;
@@ -505,14 +510,23 @@ public class StorageGroupProcessor {
       latestTimeForEachDevice.put(insertPlan.getDeviceId(), insertPlan.getTime());
     }
 
-    // check memtable size and may asyncTryToFlush the work memtable
-    if (tsFileProcessor.shouldFlush()) {
-      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+    if (tsFileProcessor.shouldStop()) {
+      filledSequenceTsFileProcessor = tsFileProcessor;
+      workSequenceTsFileProcessor = null;
     }
-  }
 
-  private void insertToBuffer(InsertPlan insertPlan) {
+    // check memtable size and may asyncTryToFlush the work memtable
+    if (filledSequenceTsFileProcessor.shouldFlush()) {
+      logger.info("The memtable size {} reaches the threshold, async flush it to tsfile: {}",
+          tsFileProcessor.getWorkMemTableMemory(),
+          tsFileProcessor.getTsFileResource().getFile().getAbsolutePath());
 
+      if (tsFileProcessor.shouldClose()) {
+        moveOneWorkProcessorToClosingList(sequence);
+      } else {
+        tsFileProcessor.asyncFlush();
+      }
+    }
   }
 
   private TsFileProcessor getOrCreateTsFileProcessor(boolean sequence) {

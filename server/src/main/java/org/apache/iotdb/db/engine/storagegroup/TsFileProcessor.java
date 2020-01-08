@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
+
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -248,6 +249,13 @@ public class TsFileProcessor {
   boolean shouldFlush() {
     return workMemTable != null
         && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum();
+  }
+
+  boolean shouldStop() {
+    IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+    return workMemTable != null
+        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum() *
+        config.getDefaultSequentialDataRatio();
   }
 
   /**
