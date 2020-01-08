@@ -18,14 +18,6 @@
  */
 package org.apache.iotdb.db.integration;
 
-import static org.junit.Assert.fail;
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Statement;
-import java.sql.Types;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.jdbc.Config;
@@ -33,6 +25,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.sql.*;
+
+import static org.junit.Assert.fail;
 
 public class IoTDBGroupbyDeviceIT {
 
@@ -367,27 +363,21 @@ public class IoTDBGroupbyDeviceIT {
   @Test
   public void selectWithValueFilterTest() throws ClassNotFoundException {
     String[] retArray = new String[]{
-        "1,root.vehicle.d0,101,1101,null,null,null,",
-        "2,root.vehicle.d0,10000,40000,2.22,null,null,",
-        "50,root.vehicle.d0,10000,50000,null,null,null,",
         "100,root.vehicle.d0,99,199,null,null,true,",
         "101,root.vehicle.d0,99,199,null,ddddd,null,",
         "102,root.vehicle.d0,80,180,10.0,fffff,null,",
         "103,root.vehicle.d0,99,199,null,null,null,",
         "104,root.vehicle.d0,90,190,null,null,null,",
         "105,root.vehicle.d0,99,199,11.11,null,null,",
-        "106,root.vehicle.d0,99,null,null,null,null,",
-        "1000,root.vehicle.d0,22222,55555,1000.11,null,null,",
-        "1,root.vehicle.d1,999,null,null,null,null,",
-        "1000,root.vehicle.d1,888,null,null,null,null,",
     };
 
     Class.forName(Config.JDBC_DRIVER_NAME);
     try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
+      // single device
       boolean hasResultSet = statement.execute(
-          "select * from root.vehicle where root.vehicle.d0.s0 > 0 group by device");
+          "select * from root.vehicle.d0 where s0 > 0 AND s1 < 200 group by device");
       Assert.assertTrue(hasResultSet);
 
       try (ResultSet resultSet = statement.getResultSet()) {
@@ -414,7 +404,7 @@ public class IoTDBGroupbyDeviceIT {
           Assert.assertEquals(retArray[cnt], builder.toString());
           cnt++;
         }
-        Assert.assertEquals(13, cnt);
+        Assert.assertEquals(6, cnt);
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -472,14 +462,14 @@ public class IoTDBGroupbyDeviceIT {
   }
 
   @Test
-  public void groupbyTimeTest() throws ClassNotFoundException {
+  public void groupByTimeTest() throws ClassNotFoundException {
     String[] retArray = new String[]{
-        "2,root.vehicle.d0,1,1,3,0,0,",
-        "20,root.vehicle.d0,0,0,0,0,0,",
-        "40,root.vehicle.d0,1,1,0,0,0,",
-        "2,root.vehicle.d1,0,null,null,null,null,",
-        "20,root.vehicle.d1,0,null,null,null,null,",
-        "40,root.vehicle.d1,0,null,null,null,null,"
+            "2,root.vehicle.d0,1,1,3,0,0,",
+            "22,root.vehicle.d0,0,0,0,0,0,",
+            "42,root.vehicle.d0,1,1,0,0,0,",
+            "2,root.vehicle.d1,0,null,null,null,null,",
+            "22,root.vehicle.d1,0,null,null,null,null,",
+            "42,root.vehicle.d1,0,null,null,null,null,",
     };
 
     Class.forName(Config.JDBC_DRIVER_NAME);
@@ -487,7 +477,7 @@ public class IoTDBGroupbyDeviceIT {
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
       boolean hasResultSet = statement.execute(
-          "select count(*) from root.vehicle GROUP BY (20ms,0,[2,50]) group by device");
+          "select count(*) from root.vehicle GROUP BY ([2,50],20ms) group by device");
       Assert.assertTrue(hasResultSet);
 
       try (ResultSet resultSet = statement.getResultSet()) {
@@ -685,10 +675,10 @@ public class IoTDBGroupbyDeviceIT {
     try (Connection connection = DriverManager
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
-      // duplicated devices and nonexistent devices
+      // duplicated devices
       boolean hasResultSet = statement.execute(
-          "select s0,s0,s1,* from root.vehicle.*, root.vehicle.d0, root.vehicle.d1, "
-              + "root.nonexistent.* where time < 20 group by device");
+          "select s0,s0,s1,* from root.vehicle.*, root.vehicle.d0, root.vehicle.d1"
+              + " where time < 20 group by device");
       Assert.assertTrue(hasResultSet);
 
       try (ResultSet resultSet = statement.getResultSet()) {
