@@ -138,8 +138,6 @@ public class StorageGroupProcessor {
   // includes sealed and unsealed sequence TsFiles
   private List<TsFileResource> sequenceFileList = new ArrayList<>();
   private TsFileProcessor workSequenceTsFileProcessor = null;
-  // the TsFileProcessor to be flushed whose memtable has been filled up with sequential data
-  private TsFileProcessor filledSequenceTsFileProcessor = null;
   private CopyOnReadLinkedList<TsFileProcessor> closingSequenceTsFileProcessor = new CopyOnReadLinkedList<>();
   // includes sealed and unsealed unSequence TsFiles
   private List<TsFileResource> unSequenceFileList = new ArrayList<>();
@@ -159,9 +157,9 @@ public class StorageGroupProcessor {
    */
   private Map<String, Long> latestFlushedTimeForEachDevice = new HashMap<>();
   /**
-   * device -> largest timestamp of the latest filled memtable
-   * latestFilledTimeForEachDevice determines whether a data point should be put into the next
-   * memtable or the latest filled memtable.
+   * device -> largest timestamp of the latest partially filled memtable
+   * latestFilledTimeForEachDevice determines whether a data point should be put into the current
+   * work memtable or the latest partially filled memtable.
    */
   private Map<String, Long> latestFilledTimeForEachDevice = new HashMap<>();
   private String storageGroupName;
@@ -420,12 +418,15 @@ public class StorageGroupProcessor {
       // init map
       latestTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
       latestFlushedTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
+      latestFilledTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
 
       Integer[] results = new Integer[batchInsertPlan.getRowCount()];
       List<Integer> sequenceIndexes = new ArrayList<>();
+      List<Integer> partiallyFilledIndexes = new ArrayList<>();
       List<Integer> unsequenceIndexes = new ArrayList<>();
 
       long lastFlushTime = latestFlushedTimeForEachDevice.get(batchInsertPlan.getDeviceId());
+      long lastFilledTime = latestFilledTimeForEachDevice.get(batchInsertPlan.getDeviceId());
       for (int i = 0; i < batchInsertPlan.getRowCount(); i++) {
         long currTime = batchInsertPlan.getTimes()[i];
         // skip points that do not satisfy TTL
@@ -435,18 +436,22 @@ public class StorageGroupProcessor {
         }
         results[i] = TSStatusCode.SUCCESS_STATUS.getStatusCode();
         if (currTime > lastFlushTime) {
-          sequenceIndexes.add(i);
+          if (currTime < lastFilledTime) {
+            partiallyFilledIndexes.add(i);
+          } else {
+            sequenceIndexes.add(i);
+          }
         } else {
           unsequenceIndexes.add(i);
         }
       }
 
-      if (!sequenceIndexes.isEmpty()) {
-        insertBatchToTsFileProcessor(batchInsertPlan, sequenceIndexes, true, results);
+      if (!sequenceIndexes.isEmpty() || !partiallyFilledIndexes.isEmpty()) {
+        insertBatchToTsFileProcessor(batchInsertPlan, sequenceIndexes, partiallyFilledIndexes, true, results);
       }
 
       if (!unsequenceIndexes.isEmpty()) {
-        insertBatchToTsFileProcessor(batchInsertPlan, unsequenceIndexes, false, results);
+        insertBatchToTsFileProcessor(batchInsertPlan, unsequenceIndexes, null, false, results);
       }
       return results;
     } finally {
@@ -462,7 +467,8 @@ public class StorageGroupProcessor {
   }
 
   private void insertBatchToTsFileProcessor(BatchInsertPlan batchInsertPlan,
-      List<Integer> indexes, boolean sequence, Integer[] results) throws QueryProcessException {
+      List<Integer> indexes, List<Integer> partiallyFilledIndexes,
+      boolean sequence, Integer[] results) throws QueryProcessException {
 
     TsFileProcessor tsFileProcessor = getOrCreateTsFileProcessor(sequence);
     if (tsFileProcessor == null) {
@@ -472,7 +478,8 @@ public class StorageGroupProcessor {
       return;
     }
 
-    boolean result = tsFileProcessor.insertBatch(batchInsertPlan, indexes, results);
+    boolean result = tsFileProcessor.insertBatch(
+        batchInsertPlan, indexes, partiallyFilledIndexes, results);
 
     // try to update the latest time of the device of this tsRecord
     if (result && latestTimeForEachDevice.get(batchInsertPlan.getDeviceId()) < batchInsertPlan
@@ -484,6 +491,14 @@ public class StorageGroupProcessor {
     if (tsFileProcessor.shouldFlush()) {
       fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
+
+    if (sequence && tsFileProcessor.hasPartiallyFilled()) {
+      if (!tsFileProcessor.hasFilledMemtable()) {
+        fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      }
+      tsFileProcessor.adjustSequenceMemtale();
+      latestFilledTimeForEachDevice.put(batchInsertPlan.getDeviceId(), latestTimeForEachDevice.get(batchInsertPlan.getDeviceId()));
+    }
   }
 
   private void insertToTsFileProcessor(InsertPlan insertPlan, boolean sequence)
@@ -491,41 +506,32 @@ public class StorageGroupProcessor {
     TsFileProcessor tsFileProcessor;
     boolean result;
 
-    if (filledSequenceTsFileProcessor != null && sequence &&
-        insertPlan.getTime() < latestFilledTimeForEachDevice.get(insertPlan.getDeviceId())) {
-      tsFileProcessor = filledSequenceTsFileProcessor;
-    }else {
-      tsFileProcessor = getOrCreateTsFileProcessor(sequence);
-    }
+    tsFileProcessor = getOrCreateTsFileProcessor(sequence);
 
     if (tsFileProcessor == null) {
       return;
     }
 
     // insert TsFileProcessor
-    result = tsFileProcessor.insert(insertPlan);
+    result = tsFileProcessor.insert(insertPlan,
+        sequence && insertPlan.getTime() < latestFilledTimeForEachDevice.get(insertPlan.getDeviceId()));
 
     // try to update the latest time of the device of this tsRecord
     if (result && latestTimeForEachDevice.get(insertPlan.getDeviceId()) < insertPlan.getTime()) {
       latestTimeForEachDevice.put(insertPlan.getDeviceId(), insertPlan.getTime());
     }
 
-    if (tsFileProcessor.shouldStop()) {
-      filledSequenceTsFileProcessor = tsFileProcessor;
-      workSequenceTsFileProcessor = null;
+    // check memtable size and may asyncTryToFlush the work memtable
+    if (tsFileProcessor.shouldFlush()) {
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
 
-    // check memtable size and may asyncTryToFlush the work memtable
-    if (filledSequenceTsFileProcessor.shouldFlush()) {
-      logger.info("The memtable size {} reaches the threshold, async flush it to tsfile: {}",
-          tsFileProcessor.getWorkMemTableMemory(),
-          tsFileProcessor.getTsFileResource().getFile().getAbsolutePath());
-
-      if (tsFileProcessor.shouldClose()) {
-        moveOneWorkProcessorToClosingList(sequence);
-      } else {
-        tsFileProcessor.asyncFlush();
+    if (sequence && tsFileProcessor.hasPartiallyFilled()) {
+      if (!tsFileProcessor.hasFilledMemtable()) {
+        fileFlushPolicy.apply(this, tsFileProcessor, sequence);
       }
+      tsFileProcessor.adjustSequenceMemtale();
+      latestFilledTimeForEachDevice.put(insertPlan.getDeviceId(), latestTimeForEachDevice.get(insertPlan.getDeviceId()));
     }
   }
 

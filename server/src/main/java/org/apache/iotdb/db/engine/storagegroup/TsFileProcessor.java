@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
-
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -92,6 +91,9 @@ public class TsFileProcessor {
   private volatile boolean shouldClose;
 
   private IMemTable workMemTable;
+
+  // the latest partially filled memtable
+  private IMemTable filledMemTable;
 
   /**
    * sync this object in query() and asyncTryToFlush()
@@ -156,14 +158,20 @@ public class TsFileProcessor {
    * @param insertPlan physical plan of insertion
    * @return succeed or fail
    */
-  public boolean insert(InsertPlan insertPlan) throws QueryProcessException {
-
-    if (workMemTable == null) {
-      workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+  public boolean insert(InsertPlan insertPlan, boolean partiallyFilled) throws QueryProcessException {
+    if (partiallyFilled) {
+      if (filledMemTable == null) {
+        filledMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+      }
+      // insert insertPlan to the partially filled memtable
+      filledMemTable.insert(insertPlan);
+    } else {
+      if (workMemTable == null) {
+        workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+      }
+      // insert insertPlan to the work memtable
+      workMemTable.insert(insertPlan);
     }
-
-    // insert insertPlan to the work memtable
-    workMemTable.insert(insertPlan);
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
@@ -186,14 +194,20 @@ public class TsFileProcessor {
   }
 
   public boolean insertBatch(BatchInsertPlan batchInsertPlan, List<Integer> indexes,
-      Integer[] results) throws QueryProcessException {
-
+      List<Integer> partiallyFilledIndexes, Integer[] results) throws QueryProcessException {
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
 
     // insert insertPlan to the work memtable
     workMemTable.insertBatch(batchInsertPlan, indexes);
+
+    if (filledMemTable == null) {
+      filledMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+    }
+
+    // insert insertPlan to the partially filled memtable
+    filledMemTable.insertBatch(batchInsertPlan, partiallyFilledIndexes);
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
@@ -247,15 +261,27 @@ public class TsFileProcessor {
 
 
   boolean shouldFlush() {
-    return workMemTable != null
-        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum();
+    return (sequence && filledMemTable != null
+        && filledMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum())
+        || (!sequence && workMemTable != null
+        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum());
   }
 
-  boolean shouldStop() {
+  boolean hasPartiallyFilled() {
     IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
     return workMemTable != null
         && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum() *
         config.getDefaultSequentialDataRatio();
+  }
+
+  boolean hasFilledMemtable() {
+    return filledMemTable == null;
+  }
+
+  // TODO how to deal with memtable?
+  void adjustSequenceMemtale() {
+    filledMemTable = workMemTable;
+    workMemTable = null;
   }
 
   /**
@@ -382,16 +408,16 @@ public class TsFileProcessor {
   }
 
   /**
-   * put the working memtable into flushing list and set the working memtable to null
+   * put the partially filled memtable into flushing list and set the working memtable to null
    */
   public void asyncFlush() {
     flushQueryLock.writeLock().lock();
     try {
-      if (workMemTable == null) {
+      if (filledMemTable == null) {
         return;
       }
 
-      addAMemtableIntoFlushingList(workMemTable);
+      addAMemtableIntoFlushingList(filledMemTable);
 
     } catch (IOException e) {
       logger.error("WAL notify start flush failed", e);
@@ -402,8 +428,8 @@ public class TsFileProcessor {
 
   /**
    * this method calls updateLatestFlushTimeCallback and move the given memtable into the flushing
-   * queue, set the current working memtable as null and then register the tsfileProcessor into the
-   * flushManager again.
+   * queue, set the current partially filled memtable as null and then register the tsfileProcessor
+   * into the flushManager again.
    */
   private void addAMemtableIntoFlushingList(IMemTable tobeFlushed) throws IOException {
     updateLatestFlushTimeCallback.get();
@@ -415,7 +441,7 @@ public class TsFileProcessor {
     if (!tobeFlushed.isSignalMemTable()) {
       totalMemTableSize += tobeFlushed.memSize();
     }
-    workMemTable = null;
+    filledMemTable = null;
     FlushManager.getInstance().registerTsFileProcessor(this);
   }
 
