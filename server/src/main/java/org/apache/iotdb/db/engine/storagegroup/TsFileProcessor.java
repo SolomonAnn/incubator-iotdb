@@ -90,12 +90,6 @@ public class TsFileProcessor {
   private IMemTable workMemTable;
   // the latest partially filled memtable
   private IMemTable filledMemTable;
-
-  /**
-   * sync this object in query() and asyncTryToFlush()
-   */
-  private final ConcurrentLinkedDeque<IMemTable> flushingMemTables = new ConcurrentLinkedDeque<>();
-
   private VersionController versionController;
   /**
    * this callback is called after the corresponding TsFile is called endFile().
@@ -191,23 +185,22 @@ public class TsFileProcessor {
     return true;
   }
 
-  public boolean insertBatch(BatchInsertPlan batchInsertPlan, int start, int end,
-      List<Integer> indexes, List<Integer> partiallyFilledIndexes, Integer[] results)
-      throws QueryProcessException {
+  public boolean insertBatch(BatchInsertPlan batchInsertPlan, int start, int end, int mid,
+      Integer[] results) throws QueryProcessException {
 
     if (workMemTable == null) {
       workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
 
     // insert insertPlan to the work memtable
-    workMemTable.insertBatch(batchInsertPlan, start, end);
+    workMemTable.insertBatch(batchInsertPlan, mid, end);
 
     if (filledMemTable == null) {
       filledMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
     }
 
     // insert insertPlan to the partially filled memtable
-    filledMemTable.insertBatch(batchInsertPlan, partiallyFilledIndexes);
+    filledMemTable.insertBatch(batchInsertPlan, start, mid);
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
@@ -276,7 +269,7 @@ public class TsFileProcessor {
   }
 
   boolean hasFilledMemtable() {
-    return filledMemTable == null;
+    return filledMemTable != null;
   }
 
   // TODO how to deal with memtable?

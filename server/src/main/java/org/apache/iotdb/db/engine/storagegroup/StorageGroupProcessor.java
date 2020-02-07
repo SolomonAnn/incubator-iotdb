@@ -163,24 +163,24 @@ public class StorageGroupProcessor {
   private List<TsFileResource> unSequenceFileList = new ArrayList<>();
   private CopyOnReadLinkedList<TsFileProcessor> closingUnSequenceTsFileProcessor = new CopyOnReadLinkedList<>();
   /*
-   * time partition id -> map, which contains
-   * device -> global latest timestamp of each device latestTimeForEachDevice caches non-flushed
-   * changes upon timestamps of each device, and is used to update latestFlushedTimeForEachDevice
-   * when a flush is issued.
+   * time partition id -> map, which contains device -> global latest timestamp of each device
+   * latestTimeForEachDevice caches non-flushed changes upon timestamps of each device, and is used
+   * to update latestFlushedTimeForEachDevice when a flush is issued.
    */
   private Map<Long, Map<String, Long>> latestTimeForEachDevice = new HashMap<>();
   /**
    * time partition id -> map, which contains device -> largest timestamp of the latest memtable to
-   * be submitted to asyncTryToFlush latestFlushedTimeForEachDevice determines whether a data point
-   * should be put into a sequential file or an unsequential file. Data of some device with
-   * timestamp less than or equals to the device's latestFlushedTime should go into an unsequential
-   * file.
+   * be submitted to asyncTryToFlush
+   * latestFlushedTimeForEachDevice determines whether a data point should be put into a sequential
+   * file or an unsequential file. Data of some device with timestamp less than or equals to the
+   * device's latestFlushedTime should go into an unsequential file.
    */
   private Map<Long, Map<String, Long>> latestFlushedTimeForEachDevice = new HashMap<>();
   /**
    * time partition id -> map, which contains device -> largest timestamp of the latest partially
-   * filled memtable. latestFilledTimeForEachDevice determines whether a data point should be put
-   * into the current work memtable or the latest partially filled memtable.
+   * filled memtable
+   * latestFilledTimeForEachDevice determines whether a data point should be put into the current
+   * work memtable or the latest partially filled memtable.
    */
   private Map<Long, Map<String, Long>> latestFilledTimeForEachDevice = new HashMap<>();
   private String storageGroupName;
@@ -486,11 +486,12 @@ public class StorageGroupProcessor {
     try {
       // init map
       long timePartitionId = fromTimeToTimePartition(insertPlan.getTime());
-      latestTimeForEachDevice.computeIfAbsent(timePartitionId, l -> new HashMap<>())
+      latestTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
           .putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
       latestFlushedTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
           .putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
-      latestFilledTimeForEachDevice.putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
+      latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
+          .putIfAbsent(insertPlan.getDeviceId(), Long.MIN_VALUE);
 
       // insert to sequence or unSequence file
       insertToTsFileProcessor(insertPlan,
@@ -504,33 +505,6 @@ public class StorageGroupProcessor {
   public Integer[] insertBatch(BatchInsertPlan batchInsertPlan) throws QueryProcessException {
     writeLock();
     try {
-
-//      // init map
-//      latestTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
-//      latestFlushedTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
-//      latestFilledTimeForEachDevice.putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
-//
-//      Integer[] results = new Integer[batchInsertPlan.getRowCount()];
-//      List<Integer> sequenceIndexes = new ArrayList<>();
-//      List<Integer> partiallyFilledIndexes = new ArrayList<>();
-//      List<Integer> unsequenceIndexes = new ArrayList<>();
-//
-//      long lastFlushTime = latestFlushedTimeForEachDevice.get(batchInsertPlan.getDeviceId());
-//      long lastFilledTime = latestFilledTimeForEachDevice.get(batchInsertPlan.getDeviceId());
-//      for (int i = 0; i < batchInsertPlan.getRowCount(); i++) {
-//        long currTime = batchInsertPlan.getTimes()[i];
-//        // skip points that do not satisfy TTL
-//        if (!checkTTL(currTime)) {
-//          results[i] = TSStatusCode.OUT_OF_TTL_ERROR.getStatusCode();
-//          continue;
-//        }
-//        results[i] = TSStatusCode.SUCCESS_STATUS.getStatusCode();
-//        if (currTime > lastFlushTime) {
-//          if (currTime < lastFilledTime) {
-//            partiallyFilledIndexes.add(i);
-//          } else {
-//            sequenceIndexes.add(i);
-//          }
       Integer[] results = new Integer[batchInsertPlan.getRowCount()];
 
       /*
@@ -547,14 +521,6 @@ public class StorageGroupProcessor {
           break;
         }
       }
-
-//      if (!sequenceIndexes.isEmpty() || !partiallyFilledIndexes.isEmpty()) {
-//        insertBatchToTsFileProcessor(batchInsertPlan, sequenceIndexes, partiallyFilledIndexes, true, results);
-//      }
-//
-//      if (!unsequenceIndexes.isEmpty()) {
-//        insertBatchToTsFileProcessor(batchInsertPlan, unsequenceIndexes, null, false, results);
-
       // loc pointing at first legal position
       if (loc == batchInsertPlan.getRowCount()) {
         return results;
@@ -563,8 +529,12 @@ public class StorageGroupProcessor {
       int before = loc;
       // before time partition
       long beforeTimePartition = fromTimeToTimePartition(batchInsertPlan.getTimes()[before]);
+      int mid = before;
       // init map
       long lastFlushTime = latestFlushedTimeForEachDevice.
+          computeIfAbsent(beforeTimePartition, id -> new HashMap<>()).
+          computeIfAbsent(batchInsertPlan.getDeviceId(), id -> Long.MIN_VALUE);
+      long lastFilledTime = latestFilledTimeForEachDevice.
           computeIfAbsent(beforeTimePartition, id -> new HashMap<>()).
           computeIfAbsent(batchInsertPlan.getDeviceId(), id -> Long.MIN_VALUE);
       // if is sequence
@@ -576,12 +546,16 @@ public class StorageGroupProcessor {
         // start next partition
         if (curTimePartition != beforeTimePartition) {
           // insert last time partition
-          insertBatchToTsFileProcessor(batchInsertPlan, before, loc, isSequence, results,
+          insertBatchToTsFileProcessor(batchInsertPlan, before, mid, loc, isSequence, results,
               beforeTimePartition);
           // re initialize
           before = loc;
           beforeTimePartition = curTimePartition;
+          mid = before;
           lastFlushTime = latestFlushedTimeForEachDevice.
+              computeIfAbsent(beforeTimePartition, id -> new HashMap<>()).
+              computeIfAbsent(batchInsertPlan.getDeviceId(), id -> Long.MIN_VALUE);
+          lastFilledTime = latestFilledTimeForEachDevice.
               computeIfAbsent(beforeTimePartition, id -> new HashMap<>()).
               computeIfAbsent(batchInsertPlan.getDeviceId(), id -> Long.MIN_VALUE);
           isSequence = false;
@@ -591,10 +565,13 @@ public class StorageGroupProcessor {
           // judge if we should insert sequence
           if (!isSequence && time > lastFlushTime) {
             // insert into unsequence and then start sequence
-            insertBatchToTsFileProcessor(batchInsertPlan, before, loc, false, results,
+            insertBatchToTsFileProcessor(batchInsertPlan, before, mid, loc, false, results,
                 beforeTimePartition);
             before = loc;
             isSequence = true;
+          }
+          if (isSequence && time > lastFilledTime) {
+            mid = loc;
           }
           loc++;
         }
@@ -602,7 +579,7 @@ public class StorageGroupProcessor {
 
       // do not forget last part
       if (before < loc) {
-        insertBatchToTsFileProcessor(batchInsertPlan, before, loc, isSequence, results,
+        insertBatchToTsFileProcessor(batchInsertPlan, before, mid, loc, isSequence, results,
             beforeTimePartition);
       }
 
@@ -628,11 +605,7 @@ public class StorageGroupProcessor {
    * @param timePartitionId time partition id
    */
   private void insertBatchToTsFileProcessor(BatchInsertPlan batchInsertPlan,
-
-//      List<Integer> indexes, List<Integer> partiallyFilledIndexes,
-//      boolean sequence, Integer[] results) throws QueryProcessException {
-
-      int start, int end, boolean sequence, Integer[] results, long timePartitionId)
+      int start, int mid, int end, boolean sequence, Integer[] results, long timePartitionId)
       throws QueryProcessException {
     // return when start <= end
     if (start >= end) {
@@ -648,8 +621,7 @@ public class StorageGroupProcessor {
       return;
     }
 
-    boolean result = tsFileProcessor.insertBatch(
-        batchInsertPlan, start, end, indexes, partiallyFilledIndexes, results);
+    boolean result = tsFileProcessor.insertBatch(batchInsertPlan, start, mid, end, results);
 
     latestTimeForEachDevice.computeIfAbsent(timePartitionId, t -> new HashMap<>())
         .putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);
@@ -671,7 +643,8 @@ public class StorageGroupProcessor {
         fileFlushPolicy.apply(this, tsFileProcessor, sequence);
       }
       tsFileProcessor.adjustSequenceMemtale();
-      latestFilledTimeForEachDevice.put(batchInsertPlan.getDeviceId(), latestTimeForEachDevice.get(batchInsertPlan.getDeviceId()));
+      latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, t -> new HashMap<>())
+          .putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);;
     }
   }
 
@@ -690,7 +663,8 @@ public class StorageGroupProcessor {
 
     // insert TsFileProcessor
     result = tsFileProcessor.insert(insertPlan,
-        sequence && insertPlan.getTime() < latestFilledTimeForEachDevice.get(insertPlan.getDeviceId()));
+        sequence && insertPlan.getTime() < latestFilledTimeForEachDevice.
+            get(timePartitionId).get(insertPlan.getDeviceId()));
 
     // try to update the latest time of the device of this tsRecord
     if (result
@@ -700,17 +674,20 @@ public class StorageGroupProcessor {
           .put(insertPlan.getDeviceId(), insertPlan.getTime());
     }
 
-    // check memtable size and may asyncTryToFlush the work memtable
+    // check the size of the partially filled memtable and may asyncTryToFlush it
     if (tsFileProcessor.shouldFlush()) {
       fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
 
+    // check the size of the work memtable and may asyncTryToFlush the partially filled memtable
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
-      if (!tsFileProcessor.hasFilledMemtable()) {
+      if (tsFileProcessor.hasFilledMemtable()) {
         fileFlushPolicy.apply(this, tsFileProcessor, sequence);
       }
       tsFileProcessor.adjustSequenceMemtale();
-      latestFilledTimeForEachDevice.put(insertPlan.getDeviceId(), latestTimeForEachDevice.get(insertPlan.getDeviceId()));
+      latestFilledTimeForEachDevice.get(timePartitionId)
+          .put(insertPlan.getDeviceId(),
+              latestTimeForEachDevice.get(timePartitionId).get(insertPlan.getDeviceId()));
     }
   }
 
