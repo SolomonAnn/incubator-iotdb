@@ -468,7 +468,7 @@ public class IoTDBConfig {
    * Time range for partitioning data inside each storage group, the unit is second
    */
   private long partitionInterval = 604800;
-  
+
   /**
    * default ratio of sequential data in the sequential memtable
    */
