@@ -336,9 +336,18 @@ public class TsFileProcessor {
       // To ensure there must be a flush thread serving this processor after the field `shouldClose`
       // is set true, we need to generate a NotifyFlushMemTable as a signal task and submit it to
       // the FlushManager.
-      IMemTable tmpMemTable = workMemTable == null ? new NotifyFlushMemTable() : workMemTable;
+      IMemTable tmpWorkMemTable = workMemTable == null ? new NotifyFlushMemTable() : workMemTable;
+      IMemTable tmpFilledMemTable = filledMemTable == null ? new NotifyFlushMemTable() : filledMemTable;
       if (logger.isDebugEnabled()) {
-        if (tmpMemTable.isSignalMemTable()) {
+        if (tmpWorkMemTable.isSignalMemTable()) {
+          logger.debug(
+              "storage group {} add a signal memtable into flushing memtable list when async close",
+              storageGroupName);
+        } else {
+          logger
+              .debug("storage group {} async flush a memtable when async close", storageGroupName);
+        }
+        if (tmpFilledMemTable.isSignalMemTable()) {
           logger.debug(
               "storage group {} add a signal memtable into flushing memtable list when async close",
               storageGroupName);
@@ -348,7 +357,8 @@ public class TsFileProcessor {
         }
       }
       try {
-        addAMemtableIntoFlushingList(tmpMemTable);
+        addAMemtableIntoFlushingList(tmpWorkMemTable);
+        addAMemtableIntoFlushingList(tmpFilledMemTable);
       } catch (IOException e) {
         logger.error("async close failed, because", e);
       }
@@ -408,11 +418,14 @@ public class TsFileProcessor {
     flushQueryLock.writeLock().lock();
     try {
       if (filledMemTable == null) {
-        return;
+        if (workMemTable == null) {
+          return;
+        } else {
+          addAMemtableIntoFlushingList(workMemTable);
+        }
+      } else {
+        addAMemtableIntoFlushingList(filledMemTable);
       }
-
-      addAMemtableIntoFlushingList(filledMemTable);
-
     } catch (IOException e) {
       logger.error("WAL notify start flush failed", e);
     } finally {
@@ -438,7 +451,11 @@ public class TsFileProcessor {
     if (!tobeFlushed.isSignalMemTable()) {
       totalMemTableSize += tobeFlushed.memSize();
     }
-    filledMemTable = null;
+    if (filledMemTable == null) {
+      workMemTable = null;
+    } else {
+      filledMemTable = null;
+    }
     FlushManager.getInstance().registerTsFileProcessor(this);
   }
 
