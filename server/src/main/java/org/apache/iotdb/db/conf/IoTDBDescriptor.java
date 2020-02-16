@@ -309,9 +309,8 @@ public class IoTDBDescriptor {
       conf.setMemtableNumInEachStorageGroup(
           Integer.parseInt(properties.getProperty("memtable_num_in_each_storage_group", String.valueOf(conf.getMemtableNumInEachStorageGroup()))));
 
-      conf.setDefaultSequentialDataRatio(Float.parseFloat(properties.getProperty(
-          "default_sequential_data_ratio",
-          String.valueOf(conf.getDefaultSequentialDataRatio()))));
+      conf.setDefaultSequentialDataRatio(
+          Float.parseFloat(properties.getProperty("default_sequential_data_ratio", String.valueOf(conf.getDefaultSequentialDataRatio()))));
 
       // At the same time, set TSFileConfig
       TSFileDescriptor.getInstance().getConfig()
