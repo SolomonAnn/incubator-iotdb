@@ -185,7 +185,7 @@ public class TsFileProcessor {
     return true;
   }
 
-  public boolean insertBatch(BatchInsertPlan batchInsertPlan, int start, int end, int mid,
+  public boolean insertBatch(BatchInsertPlan batchInsertPlan, int start, int mid, int end,
       Integer[] results) throws QueryProcessException {
 
     if (workMemTable == null) {
@@ -374,7 +374,11 @@ public class TsFileProcessor {
     IMemTable tmpMemTable;
     flushQueryLock.writeLock().lock();
     try {
-      tmpMemTable = workMemTable == null ? new NotifyFlushMemTable() : workMemTable;
+      if (filledMemTable == null) {
+        tmpMemTable = workMemTable == null ? new NotifyFlushMemTable() : workMemTable;
+      } else {
+        tmpMemTable = filledMemTable;
+      }
       if (tmpMemTable.isSignalMemTable()) {
         logger.debug("add a signal memtable into flushing memtable list when sync flush");
       }

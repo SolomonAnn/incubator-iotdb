@@ -93,7 +93,7 @@ public class TsFileProcessorTest {
     for (int i = 1; i <= 100; i++) {
       TSRecord record = new TSRecord(i, deviceId);
       record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
-      processor.insert(new InsertPlan(record), true);
+      processor.insert(new InsertPlan(record), false);
     }
 
     // query data in memory
@@ -139,7 +139,7 @@ public class TsFileProcessorTest {
     for (int i = 1; i <= 100; i++) {
       TSRecord record = new TSRecord(i, deviceId);
       record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
-      processor.insert(new InsertPlan(record), true);
+      processor.insert(new InsertPlan(record), false);
     }
 
     // query data in memory
@@ -206,7 +206,7 @@ public class TsFileProcessorTest {
       for (int i = 1; i <= 10; i++) {
         TSRecord record = new TSRecord(i, deviceId);
         record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
-        processor.insert(new InsertPlan(record), true);
+        processor.insert(new InsertPlan(record), false);
       }
       processor.asyncFlush();
     }
@@ -252,7 +252,7 @@ public class TsFileProcessorTest {
     for (int i = 1; i <= 100; i++) {
       TSRecord record = new TSRecord(i, deviceId);
       record.addTuple(DataPoint.getDataPoint(dataType, measurementId, String.valueOf(i)));
-      processor.insert(new InsertPlan(record), true);
+      processor.insert(new InsertPlan(record), false);
     }
 
     // query data in memory
