@@ -282,7 +282,7 @@ public class StorageGroupProcessorTest {
   }
 
   @Test
-  public void testPartiallyFilled() throws QueryProcessException {
+  public void testPartiallyFilledSingleInsert() throws QueryProcessException {
     int[] a = new int[] {1, 2, 3, 6, 7, 5, 4, 9, 10, 11, 12, 13, 8};
     for (int j = 0; j < 13; j++) {
       TSRecord record = new TSRecord(a[j], deviceId);
@@ -292,6 +292,68 @@ public class StorageGroupProcessorTest {
 
     processor.putAllWorkingTsFileProcessorIntoClosingList();
     processor.waitForAllCurrentTsFileProcessorsClosed();
+    QueryDataSource queryDataSource = processor.query(deviceId, measurementId, context,
+        null);
+
+    for (TsFileResource resource : queryDataSource.getSeqResources()) {
+      Assert.assertTrue(resource.isClosed());
+    }
+  }
+
+  @Test
+  public void testPartiallyFilledBatchInsert() throws QueryProcessException {
+    int[] a = new int[] {1, 2, 3, 9, 4, 5, 6, 7, 8, 10, 11, 12};
+//    int[] a = new int[] {1, 2, 3, 6, 4, 5, 7, 9, 8, 10, 11, 12};
+    String[] measurements = new String[1];
+    measurements[0] = "s0";
+    List<Integer> dataTypes = new ArrayList<>();
+    dataTypes.add(TSDataType.INT32.ordinal());
+
+    BatchInsertPlan batchInsertPlan1 = new BatchInsertPlan("root.vehicle.d0", measurements,
+        dataTypes);
+
+    long[] times = new long[4];
+    Object[] columns = new Object[1];
+    columns[0] = new int[4];
+
+    for (int r = 0; r < 4; r++) {
+      times[r] = a[r];
+      ((int[]) columns[0])[r] = 1;
+    }
+    batchInsertPlan1.setTimes(times);
+    batchInsertPlan1.setColumns(columns);
+    batchInsertPlan1.setRowCount(times.length);
+
+    processor.insertBatch(batchInsertPlan1);
+
+    BatchInsertPlan batchInsertPlan2 = new BatchInsertPlan("root.vehicle.d0", measurements,
+        dataTypes);
+
+    for (int r = 4; r < 8; r++) {
+      times[r - 4] = a[r];
+      ((int[]) columns[0])[r - 4] = 1;
+    }
+    batchInsertPlan2.setTimes(times);
+    batchInsertPlan2.setColumns(columns);
+    batchInsertPlan2.setRowCount(times.length);
+
+    processor.insertBatch(batchInsertPlan2);
+
+    BatchInsertPlan batchInsertPlan3 = new BatchInsertPlan("root.vehicle.d0", measurements,
+        dataTypes);
+
+    for (int r = 8; r < 12; r++) {
+      times[r - 8] = a[r];
+      ((int[]) columns[0])[r - 8] = 1;
+    }
+    batchInsertPlan3.setTimes(times);
+    batchInsertPlan3.setColumns(columns);
+    batchInsertPlan3.setRowCount(times.length);
+
+    processor.insertBatch(batchInsertPlan3);
+    processor.putAllWorkingTsFileProcessorIntoClosingList();
+    processor.waitForAllCurrentTsFileProcessorsClosed();
+
     QueryDataSource queryDataSource = processor.query(deviceId, measurementId, context,
         null);
 

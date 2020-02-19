@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public interface TsFileFlushPolicy {
 
-  void apply(StorageGroupProcessor storageGroupProcessor, TsFileProcessor processor, boolean isSeq, boolean isFilledMemTable);
+  void apply(StorageGroupProcessor storageGroupProcessor, TsFileProcessor processor, boolean isSeq);
 
   class DirectFlushPolicy implements TsFileFlushPolicy{
 
@@ -39,8 +39,8 @@ public interface TsFileFlushPolicy {
 
     @Override
     public void apply(StorageGroupProcessor storageGroupProcessor, TsFileProcessor tsFileProcessor,
-        boolean isSeq, boolean isFilledMemTable) {
-      long memory = isFilledMemTable ?
+        boolean isSeq) {
+      long memory = isSeq ?
           tsFileProcessor.getFilledMemTableMemory() :
           tsFileProcessor.getWorkMemTableMemory();
       logger.info("The memtable size {} reaches the threshold, async flush it to tsfile: {}",

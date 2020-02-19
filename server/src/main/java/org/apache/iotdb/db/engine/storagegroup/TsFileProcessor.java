@@ -187,20 +187,21 @@ public class TsFileProcessor {
 
   public boolean insertBatch(BatchInsertPlan batchInsertPlan, int start, int mid, int end,
       Integer[] results) throws QueryProcessException {
-
-    if (workMemTable == null) {
-      workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+    if (end > mid + 1) {
+      if (workMemTable == null) {
+        workMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+      }
+      // insert insertPlan to the work memtable
+      workMemTable.insertBatch(batchInsertPlan, mid, end);
     }
 
-    // insert insertPlan to the work memtable
-    workMemTable.insertBatch(batchInsertPlan, mid, end);
-
-    if (filledMemTable == null) {
-      filledMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+    if (mid > start) {
+      if (filledMemTable == null) {
+        filledMemTable = MemTablePool.getInstance().getAvailableMemTable(this);
+      }
+      // insert insertPlan to the partially filled memtable
+      filledMemTable.insertBatch(batchInsertPlan, start, mid + 1);
     }
-
-    // insert insertPlan to the partially filled memtable
-    filledMemTable.insertBatch(batchInsertPlan, start, mid);
 
     if (IoTDBDescriptor.getInstance().getConfig().isEnableWal()) {
       try {
