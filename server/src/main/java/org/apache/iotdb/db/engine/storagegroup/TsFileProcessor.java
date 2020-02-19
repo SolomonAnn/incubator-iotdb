@@ -268,12 +268,11 @@ public class TsFileProcessor {
         config.getDefaultSequentialDataRatio();
   }
 
-  boolean hasFilledMemtable() {
+  boolean hasFilledMemTable() {
     return filledMemTable != null;
   }
 
-  // TODO how to deal with memtable?
-  void adjustSequenceMemtale() {
+  void adjustSequenceMemTable() {
     filledMemTable = workMemTable;
     workMemTable = null;
   }
@@ -618,6 +617,10 @@ public class TsFileProcessor {
 
   public long getWorkMemTableMemory() {
     return workMemTable.memSize();
+  }
+
+  public long getFilledMemTableMemory() {
+    return filledMemTable.memSize();
   }
 
   RestorableTsFileIOWriter getWriter() {

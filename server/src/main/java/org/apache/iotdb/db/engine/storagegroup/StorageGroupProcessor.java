@@ -307,9 +307,11 @@ public class StorageGroupProcessor {
     for (TsFileResource resource : sequenceFileTreeSet) {
       long timePartitionId = getTimePartitionFromTsFileResource(resource);
       if (timePartitionId != -1) {
-        latestTimeForEachDevice.computeIfAbsent(timePartitionId, l -> new HashMap<>())
+        latestTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
             .putAll(resource.getEndTimeMap());
         latestFlushedTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
+            .putAll(resource.getEndTimeMap());
+        latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
             .putAll(resource.getEndTimeMap());
       }
     }
@@ -643,16 +645,16 @@ public class StorageGroupProcessor {
           .put(batchInsertPlan.getDeviceId(), batchInsertPlan.getTimes()[end - 1]);
     }
 
-    // check memtable size and may async try to flush the work memtable
+    // check memtable size and may async try to flush the work memtable or the partially filed memtable
     if (tsFileProcessor.shouldFlush()) {
-      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence, sequence);
     }
 
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
-      if (!tsFileProcessor.hasFilledMemtable()) {
-        fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      if (!tsFileProcessor.hasFilledMemTable()) {
+        fileFlushPolicy.apply(this, tsFileProcessor, sequence, false);
       }
-      tsFileProcessor.adjustSequenceMemtale();
+      tsFileProcessor.adjustSequenceMemTable();
       latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, t -> new HashMap<>())
           .putIfAbsent(batchInsertPlan.getDeviceId(), Long.MIN_VALUE);;
     }
@@ -684,17 +686,18 @@ public class StorageGroupProcessor {
           .put(insertPlan.getDeviceId(), insertPlan.getTime());
     }
 
-    // check the size of the partially filled memtable and may asyncTryToFlush it
+    // sequence: check the size of the partially filled memtable and may asyncTryToFlush it
+    // unsequence : check the size of the work memtable and may asyncTryToFlush it
     if (tsFileProcessor.shouldFlush()) {
-      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence, sequence);
     }
 
     // check the size of the work memtable and may asyncTryToFlush the partially filled memtable
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
-      if (tsFileProcessor.hasFilledMemtable()) {
-        fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      if (tsFileProcessor.hasFilledMemTable()) {
+        fileFlushPolicy.apply(this, tsFileProcessor, sequence, false);
       }
-      tsFileProcessor.adjustSequenceMemtale();
+      tsFileProcessor.adjustSequenceMemTable();
       latestFilledTimeForEachDevice.get(timePartitionId)
           .put(insertPlan.getDeviceId(),
               latestTimeForEachDevice.get(timePartitionId).get(insertPlan.getDeviceId()));

@@ -280,4 +280,23 @@ public class StorageGroupProcessorTest {
       assertFalse(mergeLog.exists());
     }
   }
+
+  @Test
+  public void testPartiallyFilled() throws QueryProcessException {
+    int[] a = new int[] {1, 2, 3, 6, 7, 5, 4, 9, 10, 11, 12, 13, 8};
+    for (int j = 0; j < 13; j++) {
+      TSRecord record = new TSRecord(a[j], deviceId);
+      record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(a[j])));
+      processor.insert(new InsertPlan(record));
+    }
+
+    processor.putAllWorkingTsFileProcessorIntoClosingList();
+    processor.waitForAllCurrentTsFileProcessorsClosed();
+    QueryDataSource queryDataSource = processor.query(deviceId, measurementId, context,
+        null);
+
+    for (TsFileResource resource : queryDataSource.getSeqResources()) {
+      Assert.assertTrue(resource.isClosed());
+    }
+  }
 }
