@@ -309,6 +309,7 @@ public class IoTDBDescriptor {
       conf.setMemtableNumInEachStorageGroup(
           Integer.parseInt(properties.getProperty("memtable_num_in_each_storage_group", String.valueOf(conf.getMemtableNumInEachStorageGroup()))));
 
+      // # The default ratio of sequential data in the sequential memtable
       conf.setDefaultSequentialDataRatio(
           Float.parseFloat(properties.getProperty("default_sequential_data_ratio", String.valueOf(conf.getDefaultSequentialDataRatio()))));
 

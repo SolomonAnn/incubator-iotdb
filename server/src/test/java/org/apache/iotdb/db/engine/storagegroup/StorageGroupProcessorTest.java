@@ -283,7 +283,8 @@ public class StorageGroupProcessorTest {
 
   @Test
   public void testPartiallyFilledSingleInsert() throws QueryProcessException {
-    int[] a = new int[] {1, 2, 3, 6, 7, 5, 4, 9, 10, 11, 12, 13, 8};
+    int[] a = new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+//    int[] a = new int[] {1, 2, 3, 6, 7, 5, 4, 9, 10, 11, 12, 13, 8};
     for (int j = 0; j < 13; j++) {
       TSRecord record = new TSRecord(a[j], deviceId);
       record.addTuple(DataPoint.getDataPoint(TSDataType.INT32, measurementId, String.valueOf(a[j])));

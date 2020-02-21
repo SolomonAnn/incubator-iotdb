@@ -254,12 +254,14 @@ public class TsFileProcessor {
     return tsFileResource;
   }
 
+  boolean shouldFlushFilledMemTable() {
+    return filledMemTable != null
+        && filledMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum();
+  }
 
-  boolean shouldFlush() {
-    return (sequence && filledMemTable != null
-        && filledMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum())
-        || (!sequence && workMemTable != null
-        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum());
+  boolean shouldFlushWorkMemTable() {
+    return workMemTable != null
+        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum();
   }
 
   boolean hasPartiallyFilled() {
@@ -274,8 +276,13 @@ public class TsFileProcessor {
   }
 
   void adjustSequenceMemTable() {
-    filledMemTable = workMemTable;
-    workMemTable = null;
+    flushQueryLock.writeLock().lock();
+    try {
+      filledMemTable = workMemTable;
+      workMemTable = null;
+    } finally {
+      flushQueryLock.writeLock().unlock();
+    }
   }
 
   /**

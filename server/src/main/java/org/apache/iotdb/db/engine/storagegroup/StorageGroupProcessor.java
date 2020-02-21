@@ -645,13 +645,17 @@ public class StorageGroupProcessor {
           .put(batchInsertPlan.getDeviceId(), batchInsertPlan.getTimes()[end - 1]);
     }
 
-    // sequence: check the size of the partially filled memtable and may asyncTryToFlush it
-    // unsequence : check the size of the work memtable and may asyncTryToFlush it
-    if (tsFileProcessor.shouldFlush()) {
+    // sequence: check the size of partially filled memtable and may asyncTryToFlush it
+    if (sequence && tsFileProcessor.shouldFlushFilledMemTable()) {
       fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
 
-    // sequence: check the size of the work memtable and may asyncTryToFlush the partially filled memtable
+    // unsequence : check the size of work memtable and may asyncTryToFlush it
+    if (!sequence && tsFileProcessor.shouldFlushWorkMemTable()) {
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+    }
+
+    // sequence: check the size of work memtable and may asyncTryToFlush the partially filled memtable
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
       if (tsFileProcessor.hasFilledMemTable()) {
         fileFlushPolicy.apply(this, tsFileProcessor, sequence);
@@ -689,13 +693,17 @@ public class StorageGroupProcessor {
           .put(insertPlan.getDeviceId(), insertPlan.getTime());
     }
 
-    // sequence: check the size of the partially filled memtable and may asyncTryToFlush it
-    // unsequence : check the size of the work memtable and may asyncTryToFlush it
-    if (tsFileProcessor.shouldFlush()) {
+    // sequence: check the size of partially filled memtable and may asyncTryToFlush it
+    if (sequence && tsFileProcessor.shouldFlushFilledMemTable()) {
       fileFlushPolicy.apply(this, tsFileProcessor, sequence);
     }
 
-    // sequence: check the size of the work memtable and may asyncTryToFlush the partially filled memtable
+    // unsequence : check the size of work memtable and may asyncTryToFlush it
+    if (!sequence && tsFileProcessor.shouldFlushWorkMemTable()) {
+      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+    }
+
+    // sequence: check the size of work memtable and may asyncTryToFlush partially filled memtable
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
       if (tsFileProcessor.hasFilledMemTable()) {
         fileFlushPolicy.apply(this, tsFileProcessor, sequence);
