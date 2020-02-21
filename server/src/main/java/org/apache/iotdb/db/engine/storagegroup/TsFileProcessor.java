@@ -423,7 +423,7 @@ public class TsFileProcessor {
   }
 
   /**
-   * put the partially filled memtable into flushing list and set the working memtable to null
+   * put work or filled memtable into flushing list and set it to null
    */
   public void asyncFlush() {
     flushQueryLock.writeLock().lock();
