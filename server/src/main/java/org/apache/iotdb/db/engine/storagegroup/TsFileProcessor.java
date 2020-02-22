@@ -267,8 +267,8 @@ public class TsFileProcessor {
   boolean hasPartiallyFilled() {
     IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
     return workMemTable != null
-        && workMemTable.memSize() > getMemtableSizeThresholdBasedOnSeriesNum() *
-        config.getDefaultSequentialDataRatio();
+        && workMemTable.memSize() > (long)(getMemtableSizeThresholdBasedOnSeriesNum() *
+        config.getDefaultSequentialDataRatio());
   }
 
   boolean hasFilledMemTable() {

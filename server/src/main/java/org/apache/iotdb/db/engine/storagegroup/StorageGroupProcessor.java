@@ -307,12 +307,12 @@ public class StorageGroupProcessor {
     for (TsFileResource resource : sequenceFileTreeSet) {
       long timePartitionId = getTimePartitionFromTsFileResource(resource);
       if (timePartitionId != -1) {
-        latestTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
-            .putAll(resource.getEndTimeMap());
-        latestFlushedTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
-            .putAll(resource.getEndTimeMap());
-        latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
-            .putAll(resource.getEndTimeMap());
+//        latestTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
+//            .putAll(resource.getEndTimeMap());
+//        latestFlushedTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
+//            .putAll(resource.getEndTimeMap());
+//        latestFilledTimeForEachDevice.computeIfAbsent(timePartitionId, id -> new HashMap<>())
+//            .putAll(resource.getEndTimeMap());
       }
     }
   }
@@ -695,18 +695,18 @@ public class StorageGroupProcessor {
 
     // sequence: check the size of partially filled memtable and may asyncTryToFlush it
     if (sequence && tsFileProcessor.shouldFlushFilledMemTable()) {
-      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      fileFlushPolicy.apply(this, tsFileProcessor, true);
     }
 
     // unsequence : check the size of work memtable and may asyncTryToFlush it
     if (!sequence && tsFileProcessor.shouldFlushWorkMemTable()) {
-      fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+      fileFlushPolicy.apply(this, tsFileProcessor, false);
     }
 
     // sequence: check the size of work memtable and may asyncTryToFlush partially filled memtable
     if (sequence && tsFileProcessor.hasPartiallyFilled()) {
       if (tsFileProcessor.hasFilledMemTable()) {
-        fileFlushPolicy.apply(this, tsFileProcessor, sequence);
+        fileFlushPolicy.apply(this, tsFileProcessor, true);
       }
       tsFileProcessor.adjustSequenceMemTable();
       latestFilledTimeForEachDevice.get(timePartitionId)

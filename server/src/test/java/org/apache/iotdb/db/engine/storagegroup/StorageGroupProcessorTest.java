@@ -266,24 +266,9 @@ public class StorageGroupProcessorTest {
     }
   }
 
-  class DummySGP extends StorageGroupProcessor {
-
-    DummySGP(String systemInfoDir, String storageGroupName) throws StorageGroupProcessorException {
-      super(systemInfoDir, storageGroupName, new TsFileFlushPolicy.DirectFlushPolicy());
-    }
-
-    @Override
-    protected void mergeEndAction(List<TsFileResource> seqFiles, List<TsFileResource> unseqFiles,
-        File mergeLog) {
-      super.mergeEndAction(seqFiles, unseqFiles, mergeLog);
-      mergeLock.incrementAndGet();
-      assertFalse(mergeLog.exists());
-    }
-  }
-
   @Test
   public void testPartiallyFilledSingleInsert() throws QueryProcessException {
-    int[] a = new int[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    int[] a = new int[] {1, 7, 3, 2, 5, 6, 4, 8, 9, 10, 11, 12, 13};
 //    int[] a = new int[] {1, 2, 3, 6, 7, 5, 4, 9, 10, 11, 12, 13, 8};
     for (int j = 0; j < 13; j++) {
       TSRecord record = new TSRecord(a[j], deviceId);
@@ -360,6 +345,21 @@ public class StorageGroupProcessorTest {
 
     for (TsFileResource resource : queryDataSource.getSeqResources()) {
       Assert.assertTrue(resource.isClosed());
+    }
+  }
+
+  class DummySGP extends StorageGroupProcessor {
+
+    DummySGP(String systemInfoDir, String storageGroupName) throws StorageGroupProcessorException {
+      super(systemInfoDir, storageGroupName, new TsFileFlushPolicy.DirectFlushPolicy());
+    }
+
+    @Override
+    protected void mergeEndAction(List<TsFileResource> seqFiles, List<TsFileResource> unseqFiles,
+        File mergeLog) {
+      super.mergeEndAction(seqFiles, unseqFiles, mergeLog);
+      mergeLock.incrementAndGet();
+      assertFalse(mergeLog.exists());
     }
   }
 }
