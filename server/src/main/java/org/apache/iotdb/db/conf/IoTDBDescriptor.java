@@ -326,9 +326,10 @@ public class IoTDBDescriptor {
           Integer.parseInt(properties.getProperty("default_fill_interval",
               String.valueOf(conf.getDefaultFillInterval()))));
 
-      // # The default ratio of sequential data in the sequential memtable
+      // The default ratio of sequential data in the sequential memtable
       conf.setDefaultSequentialDataRatio(
-          Float.parseFloat(properties.getProperty("default_sequential_data_ratio", String.valueOf(conf.getDefaultSequentialDataRatio()))));
+          Float.parseFloat(properties.getProperty("default_sequential_data_ratio",
+              String.valueOf(conf.getDefaultSequentialDataRatio()))));
 
       // At the same time, set TSFileConfig
       TSFileDescriptor.getInstance().getConfig()

@@ -288,7 +288,7 @@ public class StorageGroupProcessorTest {
     processor.putAllWorkingTsFileProcessorIntoClosingList();
     processor.waitForAllCurrentTsFileProcessorsClosed();
     QueryDataSource queryDataSource = processor.query(deviceId, measurementId, context,
-        null);
+        null, null);
 
     for (TsFileResource resource : queryDataSource.getSeqResources()) {
       Assert.assertTrue(resource.isClosed());
@@ -350,7 +350,7 @@ public class StorageGroupProcessorTest {
     processor.waitForAllCurrentTsFileProcessorsClosed();
 
     QueryDataSource queryDataSource = processor.query(deviceId, measurementId, context,
-        null);
+        null, null);
 
     for (TsFileResource resource : queryDataSource.getSeqResources()) {
       Assert.assertTrue(resource.isClosed());
