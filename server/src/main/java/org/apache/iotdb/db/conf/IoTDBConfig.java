@@ -152,7 +152,7 @@ public class IoTDBConfig {
   /**
    * Maximum MemTable number in MemTable pool.
    */
-  private int maxMemtableNumber = 40;
+  private int maxMemtableNumber = 60;
 
   /**
    * The amount of data iterate each time in server
@@ -461,7 +461,7 @@ public class IoTDBConfig {
   /**
    * the num of memtable in each storage group
    */
-  private int memtableNumInEachStorageGroup = 20;
+  private int memtableNumInEachStorageGroup = 30;
 
   /**
    * the default fill interval in LinearFill and PreviousFill, 10min
