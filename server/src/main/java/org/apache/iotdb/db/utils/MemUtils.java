@@ -69,6 +69,9 @@ public class MemUtils {
   }
 
   public static long getRecordSize(BatchInsertPlan batchInsertPlan, int start, int end) {
+    if (start >= end) {
+      return 0L;
+    }
     long memSize = 0;
     for (int i = 0; i < batchInsertPlan.getMeasurements().length; i++) {
       switch (batchInsertPlan.getDataTypes()[i]) {
