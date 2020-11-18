@@ -258,7 +258,8 @@ public class TsFileProcessor {
     long textDataIncrement = 0L;
     long chunkMetadataIncrement = 0L;
     String deviceId = insertRowPlan.getDeviceId().getFullPath();
-    long unsealedResourceIncrement = tsFileResource.estimateRamIncrement(deviceId);
+    long unsealedResourceIncrement = 
+        tsFileResource.estimateRamIncrement(deviceId);
     for (int i = 0; i < insertRowPlan.getDataTypes().length; i++) {
       // skip failed Measurements
       if (insertRowPlan.getDataTypes()[i] == null) {
@@ -521,7 +522,9 @@ public class TsFileProcessor {
 
       // we have to add the memtable into flushingList first and then set the shouldClose tag.
       // see https://issues.apache.org/jira/browse/IOTDB-510
-      IMemTable tmpMemTable = workMemTable == null || workMemTable.memSize() == 0 ? new NotifyFlushMemTable() : workMemTable;
+      IMemTable tmpMemTable = workMemTable == null || workMemTable.memSize() == 0 
+          ? new NotifyFlushMemTable() 
+          : workMemTable;
 
       try {
         // When invoke closing TsFile after insert data to memTable, we shouldn't flush until invoke

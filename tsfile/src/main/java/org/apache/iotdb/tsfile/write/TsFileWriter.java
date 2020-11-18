@@ -134,6 +134,7 @@ public class TsFileWriter implements AutoCloseable {
           "the given file Writer does not support writing any more. Maybe it is an complete TsFile");
     }
     this.fileWriter = fileWriter;
+    
     if (fileWriter instanceof RestorableTsFileIOWriter) {
       this.schema = new Schema(((RestorableTsFileIOWriter) fileWriter).getKnownSchema());
     }

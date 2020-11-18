@@ -119,6 +119,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
 
       if (options.getOrElse(DefaultSource.isNarrowForm, "").equals("narrow_form")) {
         val deviceNames = reader.getAllDevices()
+        
         val measurementNames = new java.util.HashSet[String]()
 
         requiredSchema.foreach((field: StructField) => {

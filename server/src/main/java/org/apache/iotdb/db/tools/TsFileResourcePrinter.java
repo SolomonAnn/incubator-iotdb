@@ -29,7 +29,8 @@ import org.apache.iotdb.db.qp.constant.DatetimeUtils;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 
 /**
- * This tool can analyze the tsfile.resource files from a folder, or analyze a single tsfile.resource file.
+ * This tool can analyze the tsfile.resource files from a folder, 
+ * or analyze a single tsfile.resource file.
  */
 public class TsFileResourcePrinter {
 
