@@ -88,7 +88,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
   }
 
   private void writeByDataType(
-      Tablet tablet, String measurementId, TSDataType dataType, int index) throws IOException {
+          Tablet tablet, String measurementId, TSDataType dataType, int index) throws IOException {
     int batchSize = tablet.rowSize;
     switch (dataType) {
       case INT32:
@@ -111,7 +111,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
         break;
       default:
         throw new UnSupportedDataTypeException(
-            String.format("Data type %s is not supported.", dataType));
+                String.format("Data type %s is not supported.", dataType));
     }
   }
 
