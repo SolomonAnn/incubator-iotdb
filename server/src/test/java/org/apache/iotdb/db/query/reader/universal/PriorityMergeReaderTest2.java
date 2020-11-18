@@ -26,33 +26,33 @@ import org.junit.Test;
 
 public class PriorityMergeReaderTest2 {
 
-  @Test
-  public void test() throws IOException {
-    FakedSeriesReader reader1 = new FakedSeriesReader(100, 80, 5, 11);
-    FakedSeriesReader reader2 = new FakedSeriesReader(150, 60, 6, 19);
-    FakedSeriesReader reader3 = new FakedSeriesReader(180, 50, 7, 31);
+	@Test
+	public void test() throws IOException {
+		FakedSeriesReader reader1 = new FakedSeriesReader(100, 80, 5, 11);
+		FakedSeriesReader reader2 = new FakedSeriesReader(150, 60, 6, 19);
+		FakedSeriesReader reader3 = new FakedSeriesReader(180, 50, 7, 31);
 
-    PriorityMergeReader priorityMergeReader = new PriorityMergeReader();
-    priorityMergeReader.addReader(reader1, 3);
-    priorityMergeReader.addReader(reader2, 2);
-    priorityMergeReader.addReader(reader3, 1);
+		PriorityMergeReader priorityMergeReader = new PriorityMergeReader();
+		priorityMergeReader.addReader(reader1, 3);
+		priorityMergeReader.addReader(reader2, 2);
+		priorityMergeReader.addReader(reader3, 1);
 
-    int cnt = 0;
-    while (priorityMergeReader.hasNextTimeValuePair()) {
-      TimeValuePair timeValuePair = priorityMergeReader.nextTimeValuePair();
-      long time = timeValuePair.getTimestamp();
-      long value = (long) timeValuePair.getValue().getValue();
+		int cnt = 0;
+		while (priorityMergeReader.hasNextTimeValuePair()) {
+			TimeValuePair timeValuePair = priorityMergeReader.nextTimeValuePair();
+			long time = timeValuePair.getTimestamp();
+			long value = (long) timeValuePair.getValue().getValue();
 
-      // System.out.println(time + "," + value);
-      if (time <= 500 && (time - 100) % 5 == 0) {
-        Assert.assertEquals(time % 11, value);
-      } else if (time <= 510 && (time - 150) % 6 == 0) {
-        Assert.assertEquals(time % 19, value);
-      } else {
-        Assert.assertEquals(time % 31, value);
-      }
-      cnt++;
-    }
-    Assert.assertEquals(162, cnt);
-  }
+			// System.out.println(time + "," + value);
+			if (time <= 500 && (time - 100) % 5 == 0) {
+				Assert.assertEquals(time % 11, value);
+			} else if (time <= 510 && (time - 150) % 6 == 0) {
+				Assert.assertEquals(time % 19, value);
+			} else {
+				Assert.assertEquals(time % 31, value);
+			}
+			cnt++;
+		}
+		Assert.assertEquals(162, cnt);
+	}
 }

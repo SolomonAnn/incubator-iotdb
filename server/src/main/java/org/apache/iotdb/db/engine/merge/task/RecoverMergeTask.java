@@ -33,10 +33,11 @@ import org.apache.iotdb.db.engine.merge.recover.LogAnalyzer.Status;
 import org.apache.iotdb.db.engine.merge.recover.MergeLogger;
 import org.apache.iotdb.db.engine.merge.selector.MaxSeriesMergeFileSelector;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.exception.MetadataErrorException;
+import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.utils.MergeUtils;
-import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
+import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class RecoverMergeTask extends MergeTask {
     super(seqFiles, unseqFiles, storageGroupSysDir, callback, taskName, fullMerge, storageGroupName);
   }
 
-  public void recoverMerge(boolean continueMerge) throws IOException, MetadataException {
+  public void recoverMerge(boolean continueMerge) throws IOException, MetadataErrorException, PathErrorException {
     File logFile = new File(storageGroupSysDir, MergeLogger.MERGE_LOG_NAME);
     if (!logFile.exists()) {
       logger.info("{} no merge.log, merge recovery ends", taskName);
@@ -94,7 +95,7 @@ public class RecoverMergeTask extends MergeTask {
     }
   }
 
-  private void resumeAfterFilesLogged(boolean continueMerge) throws IOException {
+  private void resumeAfterFilesLogged(boolean continueMerge) throws IOException, PathErrorException {
     if (continueMerge) {
       resumeMergeProgress();
       calculateConcurrentSeriesNum();
@@ -104,7 +105,7 @@ public class RecoverMergeTask extends MergeTask {
       }
 
       MergeMultiChunkTask mergeChunkTask = new MergeMultiChunkTask(mergeContext, taskName, mergeLogger, resource,
-          fullMerge, analyzer.getUnmergedPaths(), concurrentMergeSeriesNum, storageGroupName);
+          fullMerge, analyzer.getUnmergedPaths(), concurrentMergeSeriesNum);
       analyzer.setUnmergedPaths(null);
       mergeChunkTask.mergeSeries();
 
@@ -144,8 +145,8 @@ public class RecoverMergeTask extends MergeTask {
           resource.getFileReader(unseqFile));
       long totalChunkNum = chunkNums[0];
       long maxChunkNum = chunkNums[1];
-      singleSeriesUnseqCost += unseqFile.getTsFileSize() * maxChunkNum / totalChunkNum;
-      maxUnseqCost += unseqFile.getTsFileSize();
+      singleSeriesUnseqCost += unseqFile.getFileSize() * maxChunkNum / totalChunkNum;
+      maxUnseqCost += unseqFile.getFileSize();
     }
 
     long singleSeriesSeqReadCost = 0;
@@ -158,8 +159,9 @@ public class RecoverMergeTask extends MergeTask {
       long maxChunkNum = chunkNums[1];
       long fileMetaSize = MergeUtils.getFileMetaSize(seqFile, resource.getFileReader(seqFile));
       long newSingleSeriesSeqReadCost =  fileMetaSize * maxChunkNum / totalChunkNum;
-      singleSeriesSeqReadCost = Math.max(newSingleSeriesSeqReadCost, singleSeriesSeqReadCost);
-      maxSeqReadCost = Math.max(fileMetaSize, maxSeqReadCost);
+      singleSeriesSeqReadCost = newSingleSeriesSeqReadCost > singleSeriesSeqReadCost ?
+          newSingleSeriesSeqReadCost : singleSeriesSeqReadCost;
+      maxSeqReadCost = fileMetaSize > maxSeqReadCost ? fileMetaSize : maxSeqReadCost;
       seqWriteCost += fileMetaSize;
     }
 
@@ -168,8 +170,10 @@ public class RecoverMergeTask extends MergeTask {
     int ub = MaxSeriesMergeFileSelector.MAX_SERIES_NUM;
     int mid = (lb + ub) / 2;
     while (mid != lb) {
-      long unseqCost = Math.min(singleSeriesUnseqCost * mid, maxUnseqCost);
-      long seqReadCos = Math.min(singleSeriesSeqReadCost * mid, maxSeqReadCost);
+      long unseqCost = singleSeriesUnseqCost * mid < maxUnseqCost ? singleSeriesUnseqCost * mid :
+          maxUnseqCost;
+      long seqReadCos = singleSeriesSeqReadCost * mid < maxSeqReadCost ?
+          singleSeriesSeqReadCost * mid : maxSeqReadCost;
       long totalCost = unseqCost + seqReadCos + seqWriteCost;
       if (totalCost <= memBudget) {
         lb = mid;
@@ -187,15 +191,15 @@ public class RecoverMergeTask extends MergeTask {
     logger.info("{} recovering chunk counts", taskName);
     int fileCnt = 1;
     for (TsFileResource tsFileResource : resource.getSeqFiles()) {
-      logger.info("{} recovering {}  {}/{}", taskName, tsFileResource.getTsFile().getName(),
+      logger.info("{} recovering {}  {}/{}", taskName, tsFileResource.getFile().getName(),
           fileCnt, resource.getSeqFiles().size());
       RestorableTsFileIOWriter mergeFileWriter = resource.getMergeFileWriter(tsFileResource);
       mergeFileWriter.makeMetadataVisible();
       mergeContext.getUnmergedChunkStartTimes().put(tsFileResource, new HashMap<>());
-      List<PartialPath> pathsToRecover = analyzer.getMergedPaths();
+      List<Path> pathsToRecover = analyzer.getMergedPaths();
       int cnt = 0;
       double progress = 0.0;
-      for(PartialPath path : pathsToRecover) {
+      for(Path path : pathsToRecover) {
         recoverChunkCounts(path, tsFileResource, mergeFileWriter);
         if (logger.isInfoEnabled()) {
           cnt += 1.0;
@@ -203,7 +207,7 @@ public class RecoverMergeTask extends MergeTask {
           if (newProgress - progress >= 1.0) {
             progress = newProgress;
             logger.info("{} {}% series count of {} are recovered", taskName, progress,
-                tsFileResource.getTsFile().getName());
+                tsFileResource.getFile().getName());
           }
         }
       }
@@ -212,21 +216,21 @@ public class RecoverMergeTask extends MergeTask {
     analyzer.setMergedPaths(null);
   }
 
-  private void recoverChunkCounts(PartialPath path, TsFileResource tsFileResource,
+  private void recoverChunkCounts(Path path, TsFileResource tsFileResource,
       RestorableTsFileIOWriter mergeFileWriter) throws IOException {
     mergeContext.getUnmergedChunkStartTimes().get(tsFileResource).put(path, new ArrayList<>());
 
-    List<ChunkMetadata> seqFileChunks = resource.queryChunkMetadata(path, tsFileResource);
-    List<ChunkMetadata> mergeFileChunks =
-        mergeFileWriter.getVisibleMetadataList(path.getDevice(), path.getMeasurement(), null);
+    List<ChunkMetaData> seqFileChunks = resource.queryChunkMetadata(path, tsFileResource);
+    List<ChunkMetaData> mergeFileChunks =
+        mergeFileWriter.getVisibleMetadataList(path.getDevicePath(), path.getMeasurementPath(), null);
     mergeContext.getMergedChunkCnt().compute(tsFileResource, (k, v) -> v == null ?
         mergeFileChunks.size() : v + mergeFileChunks.size());
     int seqChunkIndex = 0;
     int mergeChunkIndex = 0;
     int unmergedCnt = 0;
     while (seqChunkIndex < seqFileChunks.size() && mergeChunkIndex < mergeFileChunks.size()) {
-      ChunkMetadata seqChunk = seqFileChunks.get(seqChunkIndex);
-      ChunkMetadata mergedChunk = mergeFileChunks.get(mergeChunkIndex);
+      ChunkMetaData seqChunk = seqFileChunks.get(seqChunkIndex);
+      ChunkMetaData mergedChunk = mergeFileChunks.get(mergeChunkIndex);
       if (seqChunk.getStartTime() < mergedChunk.getStartTime()) {
         // this seqChunk is unmerged
         unmergedCnt ++;

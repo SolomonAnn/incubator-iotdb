@@ -42,15 +42,15 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChunkGroupWriterImpl.class);
 
-  private final String deviceId;
+  private final String devicePath;
 
   /**
    * Map(measurementID, ChunkWriterImpl).
    */
   private Map<String, IChunkWriter> chunkWriters = new HashMap<>();
 
-  public ChunkGroupWriterImpl(String deviceId) {
-    this.deviceId = deviceId;
+  public ChunkGroupWriterImpl(String devicePath) {
+    this.devicePath = devicePath;
   }
 
   @Override
@@ -64,7 +64,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
   @Override
   public void write(long time, List<DataPoint> data) throws WriteProcessException, IOException {
     for (DataPoint point : data) {
-      String measurementId = point.getMeasurementId();
+      String measurementId = point.getMeasurementPath();
       if (!chunkWriters.containsKey(measurementId)) {
         throw new NoMeasurementException(
             "time " + time + ", measurement id " + measurementId + " not found!");
@@ -117,7 +117,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
 
   @Override
   public long flushToFileWriter(TsFileIOWriter fileWriter) throws IOException {
-    LOG.debug("start flush device id:{}", deviceId);
+    LOG.debug("start flush device id:{}", devicePath);
     // make sure all the pages have been compressed into buffers, so that we can get correct
     // groupWriter.getCurrentChunkGroupSize().
     sealAllChunks();

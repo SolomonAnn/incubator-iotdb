@@ -18,15 +18,15 @@
  */
 package org.apache.iotdb.tsfile.write.record;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.iotdb.tsfile.utils.StringContainer;
 import org.apache.iotdb.tsfile.write.record.datapoint.DataPoint;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
- * TSRecord is a kind of format that TsFile receives.TSRecord contains
- * timestamp, deviceId and a list of data points.
+ * TSRecord is a kind of format that TsFile receives.TSRecord contains timestamp, devicePath and a
+ * list of data points.
  */
 public class TSRecord {
 
@@ -35,9 +35,9 @@ public class TSRecord {
    **/
   public long time;
   /**
-   * deviceId of this TSRecord.
+   * devicePath of this TSRecord.
    **/
-  public String deviceId;
+  public String devicePath;
   /**
    * all value of this TSRecord.
    **/
@@ -47,11 +47,11 @@ public class TSRecord {
    * constructor of TSRecord.
    *
    * @param timestamp timestamp of this TSRecord
-   * @param deviceId  deviceId of this TSRecord
+   * @param devicePath devicePath of this TSRecord
    */
-  public TSRecord(long timestamp, String deviceId) {
+  public TSRecord(long timestamp, String devicePath) {
     this.time = timestamp;
-    this.deviceId = deviceId;
+    this.devicePath = devicePath;
   }
 
   public void setTime(long timestamp) {
@@ -69,16 +69,16 @@ public class TSRecord {
   }
 
   /**
-   * output this TSRecord in String format.For example: {device id: d1 time:
-   * 123456 ,data:[ {measurement id: s1 type:INT32 value: 1 } {measurement id: s2
-   * type: FLOAT value: 11.11 } {measurement id: s3 type: BOOLEAN value: true }]}
+   * output this TSRecord in String format.For example: {device id: d1 time: 123456 ,data:[
+   * {measurement id: s1 type:INT32 value: 1 } {measurement id: s2 type: FLOAT value: 11.11 }
+   * {measurement id: s3 type: BOOLEAN value: true }]}
    *
    * @return the String format of this TSRecord
    */
   @Override
   public String toString() {
     StringContainer sc = new StringContainer(" ");
-    sc.addTail("{device id:", deviceId, "time:", time, ",data:[");
+    sc.addTail("{device id:", devicePath, "time:", time, ",data:[");
     for (DataPoint tuple : dataPointList) {
       sc.addTail(tuple);
     }

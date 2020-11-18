@@ -1,21 +1,21 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+/**
+  * Licensed to the Apache Software Foundation (ASF) under one
+  * or more contributor license agreements.  See the NOTICE file
+  * distributed with this work for additional information
+  * regarding copyright ownership.  The ASF licenses this file
+  * to you under the Apache License, Version 2.0 (the
+  * "License"); you may not use this file except in compliance
+  * with the License.  You may obtain a copy of the License at
+  *
+  * http://www.apache.org/licenses/LICENSE-2.0
+  *
+  * Unless required by applicable law or agreed to in writing,
+  * software distributed under the License is distributed on an
+  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  * KIND, either express or implied.  See the License for the
+  * specific language governing permissions and limitations
+  * under the License.
+  */
 
 package org.apache.iotdb.spark.tsfile
 
@@ -41,9 +41,6 @@ import org.apache.spark.sql.execution.datasources.{FileFormat, OutputWriterFacto
 import org.apache.spark.sql.sources.{DataSourceRegister, Filter}
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
-import scala.collection.JavaConversions._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
 
@@ -118,20 +115,12 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
       }
 
       if (options.getOrElse(DefaultSource.isNarrowForm, "").equals("narrow_form")) {
-        val deviceNames = reader.getAllDevices()
-        
-        val measurementNames = new java.util.HashSet[String]()
-
-        requiredSchema.foreach((field: StructField) => {
-          if (field.name != QueryConstant.RESERVED_TIME
-            && field.name != NarrowConverter.DEVICE_NAME) {
-            measurementNames += field.name
-          }
-        })
+        val device_names = tsFileMetaData.getDeviceMap.keySet()
+        val measurement_names = tsFileMetaData.getMeasurementSchema.keySet()
 
         // construct queryExpression based on queriedSchema and filters
-        val queryExpressions = NarrowConverter.toQueryExpression(dataSchema, deviceNames,
-          measurementNames, filters, reader, file.start.asInstanceOf[java.lang.Long],
+        val queryExpressions = NarrowConverter.toQueryExpression(dataSchema, device_names,
+          measurement_names, filters, reader, file.start.asInstanceOf[java.lang.Long],
           (file.start + file.length).asInstanceOf[java.lang.Long])
 
         val queryDataSets = Executor.query(readTsFile, queryExpressions,
@@ -139,7 +128,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
           (file.start + file.length).asInstanceOf[java.lang.Long])
 
         var queryDataSet: QueryDataSet = null
-        var deviceName: String = null
+        var device_name: String = null
 
         def queryNext(): Boolean = {
           if (queryDataSet != null && queryDataSet.hasNext) {
@@ -157,7 +146,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
             }
             queryDataSet = queryDataSets.remove(queryDataSets.size() - 1)
           }
-          deviceName = queryDataSet.getPaths.get(0).getDevice
+          device_name = queryDataSet.getPaths.get(0).getDevicePath
           true
         }
 
@@ -185,10 +174,10 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
                 rowBuffer(index) = curRecord.getTimestamp
               }
               else if (field.name == NarrowConverter.DEVICE_NAME) {
-                rowBuffer(index) = deviceName
+                rowBuffer(index) = device_name
               }
               else {
-                val pos = paths.indexOf(new org.apache.iotdb.tsfile.read.common.Path(deviceName,
+                val pos = paths.indexOf(new org.apache.iotdb.tsfile.read.common.Path(device_name,
                   field.name))
                 var curField: Field = null
                 if (pos != -1) {
@@ -205,7 +194,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
       }
       else {
         // get queriedSchema from requiredSchema
-        var queriedSchema = WideConverter.prepSchema(requiredSchema, tsFileMetaData, reader)
+        var queriedSchema = WideConverter.prepSchema(requiredSchema, tsFileMetaData)
 
         // construct queryExpression based on queriedSchema and filters
         val queryExpression = WideConverter.toQueryExpression(queriedSchema, filters)
@@ -240,7 +229,7 @@ private[tsfile] class DefaultSource extends FileFormat with DataSourceRegister {
               if (field.name == QueryConstant.RESERVED_TIME) {
                 rowBuffer(index) = curRecord.getTimestamp
               } else {
-                val pos = paths.indexOf(new org.apache.iotdb.tsfile.read.common.Path(field.name, true))
+                val pos = paths.indexOf(new org.apache.iotdb.tsfile.read.common.Path(field.name))
                 var curField: Field = null
                 if (pos != -1) {
                   curField = fields.get(pos)

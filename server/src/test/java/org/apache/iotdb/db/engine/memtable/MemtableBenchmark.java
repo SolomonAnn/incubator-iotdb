@@ -18,10 +18,9 @@
  */
 package org.apache.iotdb.db.engine.memtable;
 
-import org.apache.iotdb.db.exception.WriteProcessException;
+import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 
 /**
  * Memtable insert benchmark. Bench the Memtable and get its performance.
@@ -41,13 +40,13 @@ public class MemtableBenchmark {
     }
   }
 
-  public static void main(String[] args) throws WriteProcessException {
+  public static void main(String[] args) throws PathErrorException, StorageGroupException {
     IMemTable memTable = new PrimitiveMemTable();
     final long startTime = System.currentTimeMillis();
     // cpu not locality
     for (int i = 0; i < numOfPoint; i++) {
       for (int j = 0; j < numOfMeasurement; j++) {
-        memTable.write(deviceId, measurementId[j], new MeasurementSchema(measurementId[j], tsDataType, TSEncoding.PLAIN), System.nanoTime(),
+        memTable.write(deviceId, measurementId[j], tsDataType, System.nanoTime(),
             String.valueOf(System.currentTimeMillis()));
       }
     }

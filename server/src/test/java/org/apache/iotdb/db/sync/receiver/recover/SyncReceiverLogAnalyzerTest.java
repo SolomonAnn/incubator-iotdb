@@ -32,24 +32,21 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.directories.DirectoryManager;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.exception.DiskSpaceInsufficientException;
+import org.apache.iotdb.db.exception.MetadataErrorException;
 import org.apache.iotdb.db.exception.StartupException;
 import org.apache.iotdb.db.exception.StorageEngineException;
-import org.apache.iotdb.db.exception.metadata.IllegalPathException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.service.IoTDB;
-import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.sync.receiver.load.FileLoader;
 import org.apache.iotdb.db.sync.receiver.load.FileLoaderManager;
 import org.apache.iotdb.db.sync.receiver.load.FileLoaderTest;
 import org.apache.iotdb.db.sync.receiver.load.IFileLoader;
+import org.apache.iotdb.db.sync.conf.SyncConstant;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -61,6 +58,7 @@ public class SyncReceiverLogAnalyzerTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(FileLoaderTest.class);
   private static final String SG_NAME = "root.sg";
+  private static IoTDB daemon;
   private String dataDir;
   private IFileLoader fileLoader;
   private ISyncReceiverLogAnalyzer logAnalyze;
@@ -68,9 +66,10 @@ public class SyncReceiverLogAnalyzerTest {
 
   @Before
   public void setUp()
-      throws IOException, InterruptedException, StartupException, DiskSpaceInsufficientException, MetadataException {
-    IoTDBDescriptor.getInstance().getConfig().setSyncEnable(true);
+      throws IOException, InterruptedException, StartupException, DiskSpaceInsufficientException, MetadataErrorException {
     EnvironmentUtils.closeStatMonitor();
+    daemon = IoTDB.getInstance();
+    daemon.active();
     EnvironmentUtils.envSetUp();
     dataDir = new File(DirectoryManager.getInstance().getNextFolderForSequenceFile())
         .getParentFile().getAbsolutePath();
@@ -78,23 +77,23 @@ public class SyncReceiverLogAnalyzerTest {
     initMetadata();
   }
 
-  private void initMetadata() throws MetadataException {
-    MManager mmanager = IoTDB.metaManager;
+  private void initMetadata() throws MetadataErrorException {
+    MManager mmanager = MManager.getInstance();
     mmanager.init();
-    mmanager.setStorageGroup(new PartialPath("root.sg0"));
-    mmanager.setStorageGroup(new PartialPath("root.sg1"));
-    mmanager.setStorageGroup(new PartialPath("root.sg2"));
+    mmanager.clear();
+    mmanager.setStorageGroupToMTree("root.sg0");
+    mmanager.setStorageGroupToMTree("root.sg1");
+    mmanager.setStorageGroupToMTree("root.sg2");
   }
 
   @After
   public void tearDown() throws InterruptedException, IOException, StorageEngineException {
+    daemon.stop();
     EnvironmentUtils.cleanEnv();
-    IoTDBDescriptor.getInstance().getConfig().setSyncEnable(false);
   }
 
   @Test
-  public void recover()
-      throws IOException, StorageEngineException, InterruptedException, IllegalPathException {
+  public void recover() throws IOException, StorageEngineException, InterruptedException {
     receiverLogger = new SyncReceiverLogger(
         new File(getReceiverFolderFile(), SyncConstant.SYNC_LOG_NAME));
     fileLoader = FileLoader.createFileLoader(getReceiverFolderFile());
@@ -112,8 +111,8 @@ public class SyncReceiverLogAnalyzerTest {
         String rand = String.valueOf(r.nextInt(10000) + i * j);
         String fileName =
             getSnapshotFolder() + File.separator + SG_NAME + i + File.separator + System
-                .currentTimeMillis() + IoTDBConstant.FILE_NAME_SEPARATOR + rand
-                + IoTDBConstant.FILE_NAME_SEPARATOR + "0.tsfile";
+                .currentTimeMillis() + IoTDBConstant.TSFILE_NAME_SEPARATOR + rand
+                + IoTDBConstant.TSFILE_NAME_SEPARATOR + "0.tsfile";
         Thread.sleep(1);
         File syncFile = new File(fileName);
         receiverLogger
@@ -137,15 +136,15 @@ public class SyncReceiverLogAnalyzerTest {
           LOGGER.error("Can not create new file {}", syncFile.getPath());
         }
         TsFileResource tsFileResource = new TsFileResource(syncFile);
-        tsFileResource.putStartTime(String.valueOf(i), (long) j * 10);
-        tsFileResource.putEndTime(String.valueOf(i), (long) j * 10 + 5);
+        tsFileResource.getStartTimeMap().put((long) i, (long) j * 10);
+        tsFileResource.getEndTimeMap().put((long) i, (long) j * 10 + 5);
         tsFileResource.serialize();
       }
     }
 
     for (int i = 0; i < 3; i++) {
-      StorageGroupProcessor processor = StorageEngine.getInstance().getProcessor(new PartialPath(SG_NAME + i));
-      assertTrue(processor.getSequenceFileTreeSet().isEmpty());
+      StorageGroupProcessor processor = StorageEngine.getInstance().getProcessor(SG_NAME + i);
+      assertTrue(processor.getSequenceFileList().isEmpty());
       assertTrue(processor.getUnSequenceFileList().isEmpty());
     }
 
@@ -195,8 +194,6 @@ public class SyncReceiverLogAnalyzerTest {
       }
     } catch (InterruptedException e) {
       LOGGER.error("Fail to wait for loading new tsfiles", e);
-      Thread.currentThread().interrupt();
-      throw e;
     }
 
     assertFalse(new File(getReceiverFolderFile(), SyncConstant.LOAD_LOG_NAME).exists());

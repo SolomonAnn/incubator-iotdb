@@ -23,43 +23,36 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import org.apache.commons.io.FileUtils;
-import org.apache.iotdb.db.conf.IoTDBConstant;
-import org.apache.iotdb.db.constant.TestConstant;
-import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
 import org.apache.iotdb.db.engine.version.VersionController;
-import org.apache.iotdb.db.exception.StorageEngineException;
-import org.apache.iotdb.db.exception.StorageGroupProcessorException;
-import org.apache.iotdb.db.exception.metadata.MetadataException;
-import org.apache.iotdb.db.metadata.PartialPath;
-import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
-import org.apache.iotdb.db.query.reader.chunk.ChunkDataIterator;
+import org.apache.iotdb.db.exception.PathErrorException;
+import org.apache.iotdb.db.exception.ProcessorException;
+import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
+import org.apache.iotdb.db.query.reader.chunkRelated.DiskChunkReader;
 import org.apache.iotdb.db.query.reader.universal.PriorityMergeReader;
-import org.apache.iotdb.db.service.IoTDB;
-import org.apache.iotdb.db.utils.EnvironmentUtils;
+import org.apache.iotdb.db.utils.TimeValuePair;
 import org.apache.iotdb.db.writelog.manager.MultiFileLogNodeManager;
 import org.apache.iotdb.db.writelog.node.WriteLogNode;
-import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.exception.write.WriteProcessException;
-import org.apache.iotdb.tsfile.file.metadata.ChunkMetadata;
+import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.TimeValuePair;
+import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Chunk;
 import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.controller.CachedChunkLoaderImpl;
 import org.apache.iotdb.tsfile.read.controller.IChunkLoader;
+import org.apache.iotdb.tsfile.read.controller.ChunkLoaderImpl;
 import org.apache.iotdb.tsfile.read.controller.IMetadataQuerier;
 import org.apache.iotdb.tsfile.read.controller.MetadataQuerierByFileImpl;
 import org.apache.iotdb.tsfile.read.reader.chunk.ChunkReader;
+import org.apache.iotdb.tsfile.read.reader.chunk.ChunkReaderWithoutFilter;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.datapoint.DataPoint;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.Schema;
+import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,7 +62,7 @@ public class UnseqTsFileRecoverTest {
   private File tsF;
   private TsFileWriter writer;
   private WriteLogNode node;
-  private String logNodePrefix = TestConstant.OUTPUT_DATA_DIR.concat("testNode/0");
+  private String logNodePrefix = "testNode";
   private Schema schema;
   private TsFileResource resource;
   private VersionController versionController = new VersionController() {
@@ -87,50 +80,27 @@ public class UnseqTsFileRecoverTest {
   };
 
   @Before
-  public void setup() throws IOException, WriteProcessException, MetadataException {
-    EnvironmentUtils.envSetUp();
-    tsF = SystemFileFactory.INSTANCE.getFile(logNodePrefix, "1-1-1.tsfile");
+  public void setup() throws IOException, WriteProcessException {
+    tsF = SystemFileFactory.INSTANCE.getFile("temp", "test.ts");
     tsF.getParentFile().mkdirs();
 
     schema = new Schema();
     for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 10; j++) {
-        PartialPath path = new PartialPath("root.sg.device" + i + IoTDBConstant.PATH_SEPARATOR + "sensor" + j);
-        MeasurementSchema measurementSchema = new MeasurementSchema("sensor" + j, TSDataType.INT64,
-            TSEncoding.PLAIN);
-        schema.registerTimeseries(path.toTSFilePath(), measurementSchema);
-        IoTDB.metaManager.createTimeseries(path, measurementSchema.getType(),
-            measurementSchema.getEncodingType(), measurementSchema.getCompressor(),
-            measurementSchema.getProps());
-      }
+      schema.registerMeasurement(new MeasurementSchema("sensor" + i, TSDataType.INT64,
+          TSEncoding.PLAIN));
     }
-    schema.registerTimeseries(new Path(("root.sg.device99"), ("sensor4")),
-        new MeasurementSchema("sensor4", TSDataType.INT64, TSEncoding.PLAIN));
-    IoTDB.metaManager
-        .createTimeseries(new PartialPath("root.sg.device99.sensor4"), TSDataType.INT64, TSEncoding.PLAIN,
-            TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap());
-    schema.registerTimeseries(new Path(("root.sg.device99"), ("sensor2")),
-        new MeasurementSchema("sensor2", TSDataType.INT64, TSEncoding.PLAIN));
-    IoTDB.metaManager
-        .createTimeseries(new PartialPath("root.sg.device99.sensor2"), TSDataType.INT64, TSEncoding.PLAIN,
-            TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap());
-    schema.registerTimeseries(new Path(("root.sg.device99"), ("sensor1")),
-        new MeasurementSchema("sensor1", TSDataType.INT64, TSEncoding.PLAIN));
-    IoTDB.metaManager
-        .createTimeseries(new PartialPath("root.sg.device99.sensor1"), TSDataType.INT64, TSEncoding.PLAIN,
-            TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap());
     writer = new TsFileWriter(tsF, schema);
 
-    TSRecord tsRecord = new TSRecord(100, "root.sg.device99");
+    TSRecord tsRecord = new TSRecord(100, "device99");
     tsRecord.addTuple(DataPoint.getDataPoint(TSDataType.INT64, "sensor4", String.valueOf(0)));
     writer.write(tsRecord);
-    tsRecord = new TSRecord(2, "root.sg.device99");
+    tsRecord = new TSRecord(2, "device99");
     tsRecord.addTuple(DataPoint.getDataPoint(TSDataType.INT64, "sensor1", String.valueOf(0)));
     writer.write(tsRecord);
 
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
-        tsRecord = new TSRecord(i, "root.sg.device" + j);
+        tsRecord = new TSRecord(i, "device" + j);
         for (int k = 0; k < 10; k++) {
           tsRecord.addTuple(DataPoint.getDataPoint(TSDataType.INT64, "sensor" + k,
               String.valueOf(k)));
@@ -139,77 +109,72 @@ public class UnseqTsFileRecoverTest {
       }
     }
 
-    writer.flushAllChunkGroups();
+    writer.flushForTest();
     writer.getIOWriter().close();
 
     node = MultiFileLogNodeManager.getInstance().getNode(logNodePrefix + tsF.getName());
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {
         String[] measurements = new String[10];
-        TSDataType[] types = new TSDataType[10];
         String[] values = new String[10];
         for (int k = 0; k < 10; k++) {
           measurements[k] = "sensor" + k;
-          types[k] = TSDataType.INT64;
           values[k] = String.valueOf(k + 10);
         }
-        InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device" + j), i, measurements, types,
-            values);
-        node.write(insertRowPlan);
+        InsertPlan insertPlan = new InsertPlan("device" + j, i, measurements, values);
+        node.write(insertPlan);
       }
       node.notifyStartFlush();
     }
-    InsertRowPlan insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 1, "sensor4", TSDataType.INT64, "4");
-    node.write(insertRowPlan);
-    insertRowPlan = new InsertRowPlan(new PartialPath("root.sg.device99"), 300, "sensor2", TSDataType.INT64, "2");
-    node.write(insertRowPlan);
+    InsertPlan insertPlan = new InsertPlan("device99", 1, "sensor4", "4");
+    node.write(insertPlan);
+    insertPlan = new InsertPlan("device99", 300, "sensor2", "2");
+    node.write(insertPlan);
     node.close();
 
     resource = new TsFileResource(tsF);
   }
 
   @After
-  public void tearDown() throws IOException, StorageEngineException {
+  public void tearDown() throws IOException {
     FileUtils.deleteDirectory(tsF.getParentFile());
-    resource.close();
     node.delete();
-    EnvironmentUtils.cleanEnv();
   }
 
   @Test
-  public void test() throws StorageGroupProcessorException, IOException {
-    TsFileRecoverPerformer performer = new TsFileRecoverPerformer(logNodePrefix,
-        versionController, resource, false, false);
-    performer.recover(true).close();
+  public void test() throws ProcessorException, IOException, PathErrorException {
+    TsFileRecoverPerformer performer = new TsFileRecoverPerformer(logNodePrefix, schema,
+        versionController, resource, true);
+    performer.recover();
 
-    assertEquals(1, resource.getStartTime("root.sg.device99"));
-    assertEquals(300, resource.getEndTime("root.sg.device99"));
+    assertEquals(1, (long) resource.getStartTimeMap().get("device99"));
+    assertEquals(300, (long) resource.getEndTimeMap().get("device99"));
     for (int i = 0; i < 10; i++) {
-      assertEquals(0, resource.getStartTime("root.sg.device" + i));
-      assertEquals(9, resource.getEndTime("root.sg.device" + i));
+      assertEquals(0, (long) resource.getStartTimeMap().get("device" + i));
+      assertEquals(9, (long) resource.getEndTimeMap().get("device" + i));
     }
 
     TsFileSequenceReader fileReader = new TsFileSequenceReader(tsF.getPath(), true);
     IMetadataQuerier metadataQuerier = new MetadataQuerierByFileImpl(fileReader);
-    IChunkLoader chunkLoader = new CachedChunkLoaderImpl(fileReader);
+    IChunkLoader chunkLoader = new ChunkLoaderImpl(fileReader);
 
-    Path path = new Path("root.sg.device1", "sensor1");
+    Path path = new Path("device1", "sensor1");
 
     PriorityMergeReader unSeqMergeReader = new PriorityMergeReader();
     int priorityValue = 1;
-    for (ChunkMetadata chunkMetaData : metadataQuerier.getChunkMetaDataList(path)) {
-      Chunk chunk = chunkLoader.loadChunk(chunkMetaData);
-      ChunkReader chunkReader = new ChunkReader(chunk, null);
-      unSeqMergeReader
-          .addReader(new ChunkDataIterator(chunkReader), priorityValue);
+    for (ChunkMetaData chunkMetaData : metadataQuerier.getChunkMetaDataList(path)) {
+      Chunk chunk = chunkLoader.getChunk(chunkMetaData);
+      ChunkReader chunkReader = new ChunkReaderWithoutFilter(chunk);
+
+      unSeqMergeReader.addReaderWithPriority(new DiskChunkReader(chunkReader), priorityValue);
       priorityValue++;
     }
 
     for (int i = 0; i < 10; i++) {
-      TimeValuePair timeValuePair = unSeqMergeReader.currentTimeValuePair();
+      TimeValuePair timeValuePair = unSeqMergeReader.current();
       assertEquals(i, timeValuePair.getTimestamp());
-      assertEquals(11, (long) timeValuePair.getValue().getValue());
-      unSeqMergeReader.nextTimeValuePair();
+      assertEquals(11, timeValuePair.getValue().getLong());
+      unSeqMergeReader.next();
     }
     unSeqMergeReader.close();
     fileReader.close();

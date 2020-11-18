@@ -18,100 +18,150 @@
  */
 package org.apache.iotdb.tsfile.read.common;
 
-import java.io.Serializable;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
+import org.apache.iotdb.tsfile.utils.StringContainer;
+
+import java.io.Serializable;
 
 /**
- * This class represent a time series in TsFile,
- * which is usually defined by a device and a measurement.
- *
- * If you want to use one String such as "device1.measurement1" to init Path in TsFile API,
- * please use the new Path(string, true) to split it to device and measurement.
+ * This class define an Object named Path to represent a series in IoTDB. AndExpression in batch read, this definition
+ * is also used in query processing. Note that, Path is unmodified after a new object has been created.
  */
-public class Path implements Serializable, Comparable<Path> {
+public class Path implements Serializable {
 
   private static final long serialVersionUID = 3405277066329298200L;
-  private String measurement;
-  protected String device;
-  protected String fullPath;
-  private static final String ILLEGAL_PATH_ARGUMENT = "Path parameter is null";
+  private String measurementPath = null;
+  private String devicePath = null;
+  private String fullPath;
+  private String illegalPathArgument = "Path parameter is null";
 
-  public Path() {}
-
-  /**
-   * this constructor doesn't split the path, only useful for table header.
-   * @param pathSc the path that wouldn't  be split.
-   */
-  @SuppressWarnings("the path that wouldn't be split")
-  public Path(String pathSc) {
-    this(pathSc, false);
-  }
-
-  /**
-   * @param pathSc path
-   * @param needSplit whether need to be split to device and measurement, doesn't support escape character yet.
-   */
-  public Path(String pathSc, boolean needSplit) {
+  public Path(StringContainer pathSc) {
     if (pathSc == null) {
-      throw new IllegalArgumentException(ILLEGAL_PATH_ARGUMENT);
+      throw new IllegalArgumentException("input pathSc is null!");
     }
-    if(!needSplit) {
-      fullPath = pathSc;
-    } else {
-      if (pathSc.length() > 0) {
-        if (pathSc.charAt(pathSc.length() - 1) == TsFileConstant.DOUBLE_QUOTE) {
-          int endIndex = pathSc.lastIndexOf('"', pathSc.length() - 2);
-          // if a double quotes with escape character
-          while (endIndex != -1 && pathSc.charAt(endIndex - 1) == '\\') {
-            endIndex = pathSc.lastIndexOf('"', endIndex - 2);
-          }
-          if (endIndex != -1 && (endIndex == 0 || pathSc.charAt(endIndex - 1) == '.')) {
-            fullPath = pathSc;
-            device = pathSc.substring(0, endIndex - 1);
-            measurement = pathSc.substring(endIndex);
-          } else {
-            throw new IllegalArgumentException(ILLEGAL_PATH_ARGUMENT);
-          }
-        } else if (pathSc.charAt(pathSc.length() - 1) != TsFileConstant.DOUBLE_QUOTE
-            && pathSc.charAt(pathSc.length() - 1) != TsFileConstant.PATH_SEPARATOR_CHAR) {
-          int endIndex = pathSc.lastIndexOf(TsFileConstant.PATH_SEPARATOR_CHAR);
-          if (endIndex < 0) {
-            fullPath = pathSc;
-            device = "";
-            measurement = pathSc;
-          } else {
-            fullPath = pathSc;
-            device = pathSc.substring(0, endIndex);
-            measurement = pathSc.substring(endIndex + 1);
-          }
-        } else {
-          throw new IllegalArgumentException(ILLEGAL_PATH_ARGUMENT);
-        }
-      } else {
-        fullPath = pathSc;
-        device = "";
-        measurement = pathSc;
-      }
+    String[] splits = pathSc.toString().split(TsFileConstant.PATH_SEPARATER_NO_REGEX);
+    init(splits);
+  }
+
+  public Path(String pathSc) {
+    if (pathSc == null) {
+      throw new IllegalArgumentException(illegalPathArgument);
     }
+    String[] splits = pathSc.split(TsFileConstant.PATH_SEPARATER_NO_REGEX);
+    init(splits);
+  }
+
+  public Path(String[] pathSc) {
+    if (pathSc == null) {
+      throw new IllegalArgumentException(illegalPathArgument);
+    }
+    String[] splits = new StringContainer(pathSc, TsFileConstant.PATH_SEPARATOR).toString()
+        .split(TsFileConstant.PATH_SEPARATER_NO_REGEX);
+    init(splits);
   }
 
   /**
-   * construct a Path directly using device and measurement, no need to reformat
-   * the path
-   *
-   * @param device      root.deviceType.d1
-   * @param measurement s1 , does not contain TsFileConstant.PATH_SEPARATOR
+   * construct a Path directly using device and measurement, no need to reformat the path
+   * @param devicePath root.deviceType.d1
+   * @param measurementPath s1 , does not contain TsFileConstant.PATH_SEPARATOR
    */
-  public Path(String device, String measurement) {
-    if (device == null || measurement == null) {
-      throw new IllegalArgumentException(ILLEGAL_PATH_ARGUMENT);
+  public Path(String devicePath, String measurementPath) {
+    if (devicePath == null || measurementPath == null) {
+      throw new IllegalArgumentException(illegalPathArgument);
     }
-    this.device = device;
-    this.measurement = measurement;
-    if(!device.equals("")) {
-      this.fullPath = device + TsFileConstant.PATH_SEPARATOR + measurement;
+    this.devicePath = devicePath;
+    this.measurementPath = measurementPath;
+    this.fullPath = devicePath + TsFileConstant.PATH_SEPARATOR + measurementPath;
+  }
+
+  public static Path mergePath(Path prefix, Path suffix) {
+    StringContainer sc = new StringContainer(TsFileConstant.PATH_SEPARATOR);
+    sc.addTail(prefix);
+    sc.addTail(suffix);
+    return new Path(sc);
+  }
+
+  /**
+   * add {@code prefix} as the prefix of {@code src}.
+   *
+   * @param src
+   *            to be added.
+   * @param prefix
+   *            the newly prefix
+   * @return if this path start with prefix
+   */
+  public static Path addPrefixPath(Path src, String prefix) {
+    StringContainer sc = new StringContainer(TsFileConstant.PATH_SEPARATOR);
+    sc.addTail(prefix);
+    sc.addTail(src);
+    return new Path(sc);
+  }
+
+  /**
+   * add {@code prefix} as the prefix of {@code src}.
+   *
+   * @param src
+   *            to be added.
+   * @param prefix
+   *            the newly prefix
+   * @return <code>Path</code>
+   */
+  public static Path addPrefixPath(Path src, Path prefix) {
+    return addPrefixPath(src, prefix.fullPath);
+  }
+
+  /**
+   * replace prefix of descPrefix with given parameter {@code srcPrefix}. If the level of the path constructed by
+   * {@code srcPrefix} is larger than {@code descPrefix}, return {@code
+   * srcPrefix} directly.
+   *
+   * @param srcPrefix
+   *            the prefix to replace descPrefix
+   * @param descPrefix
+   *            to be replaced
+   * @return If the level of the path constructed by {@code srcPrefix} is larger than {@code descPrefix}, return
+   *         {@code srcPrefix} directly.
+   */
+  public static Path replace(String srcPrefix, Path descPrefix) {
+    if ("".equals(srcPrefix) || descPrefix.startWith(srcPrefix)) {
+      return descPrefix;
+    }
+    int prefixSize = srcPrefix.split(TsFileConstant.PATH_SEPARATER_NO_REGEX).length;
+    String[] descArray = descPrefix.fullPath.split(TsFileConstant.PATH_SEPARATER_NO_REGEX);
+    if (descArray.length <= prefixSize) {
+      return new Path(srcPrefix);
+    }
+    StringContainer sc = new StringContainer(TsFileConstant.PATH_SEPARATOR);
+    sc.addTail(srcPrefix);
+    for (int i = prefixSize; i < descArray.length; i++) {
+      sc.addTail(descArray[i]);
+    }
+    return new Path(sc);
+  }
+
+  /**
+   * replace prefix of {@code descPrefix} with given parameter {@code srcPrefix}. If the level of {@code srcPrefix} is
+   * larger than {@code descPrefix}, return {@code srcPrefix} directly.
+   *
+   * @param srcPrefix
+   *            the prefix to replace descPrefix
+   * @param descPrefix
+   *            to be replaced
+   * @return If the level of {@code srcPrefix} is larger than {@code descPrefix}, return {@code srcPrefix} directly.
+   */
+  public static Path replace(Path srcPrefix, Path descPrefix) {
+    return replace(srcPrefix.fullPath, descPrefix);
+  }
+
+  private void init(String[] splitedPathArray) {
+    StringContainer sc = new StringContainer(splitedPathArray, TsFileConstant.PATH_SEPARATOR);
+    if (sc.size() <= 1) {
+      devicePath = "";
+      fullPath = measurementPath = sc.toString();
     } else {
-      fullPath = measurement;
+      devicePath = sc.getSubStringContainer(0, -2).toString();
+      measurementPath = sc.getSubString(-1);
+      fullPath = sc.toString();
     }
   }
 
@@ -119,15 +169,13 @@ public class Path implements Serializable, Comparable<Path> {
     return fullPath;
   }
 
-  public String getDevice() {
-    return device;
+  public String getDevicePath() {
+    return devicePath;
   }
 
-  public String getMeasurement() {
-    return measurement;
+  public String getMeasurementPath() {
+    return measurementPath;
   }
-
-  public String getFullPathWithAlias() { throw new IllegalArgumentException("doesn't alias in TSFile Path"); }
 
   @Override
   public int hashCode() {
@@ -140,12 +188,7 @@ public class Path implements Serializable, Comparable<Path> {
   }
 
   public boolean equals(String obj) {
-    return this.fullPath.equals(obj);
-  }
-
-  @Override
-  public int compareTo(Path path) {
-    return fullPath.compareTo(path.getFullPath());
+    return obj != null && this.fullPath.equals(obj);
   }
 
   @Override
@@ -158,4 +201,25 @@ public class Path implements Serializable, Comparable<Path> {
     return new Path(fullPath);
   }
 
+  /**
+   * if prefix is null, return false, else judge whether this.fullPath starts with prefix
+   *
+   * @param prefix
+   *            the prefix string to be tested.
+   * @return True if fullPath starts with prefix
+   */
+  public boolean startWith(String prefix) {
+    return prefix != null && fullPath.startsWith(prefix);
+  }
+
+  /**
+   * if prefix is null, return false, else judge whether this.fullPath starts with prefix.fullPath
+   *
+   * @param prefix
+   *            the prefix path to be tested.
+   * @return True if fullPath starts with prefix.fullPath
+   */
+  public boolean startWith(Path prefix) {
+    return startWith(prefix.fullPath);
+  }
 }

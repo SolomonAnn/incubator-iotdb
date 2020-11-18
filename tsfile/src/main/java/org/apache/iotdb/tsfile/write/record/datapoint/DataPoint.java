@@ -19,13 +19,14 @@
 
 package org.apache.iotdb.tsfile.write.record.datapoint;
 
-import java.io.IOException;
-import java.math.BigDecimal;
 import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.StringContainer;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
+
+import java.io.IOException;
+import java.math.BigDecimal;
 
 /**
  * This is a abstract class representing a data point. DataPoint consists of a measurement id and a
@@ -39,50 +40,50 @@ public abstract class DataPoint {
    **/
   protected final TSDataType type;
   /**
-   * measurementId of this DataPoint.
+   * measurement path of this DataPoint.
    **/
-  protected final String measurementId;
+  protected final String measurementPath;
 
   /**
    * constructor of DataPoint.
    *
    * @param type value type of this DataPoint
-   * @param measurementId measurementId of this DataPoint
+   * @param measurementPath measurement path of this DataPoint
    */
-  public DataPoint(TSDataType type, String measurementId) {
+  public DataPoint(TSDataType type, String measurementPath) {
     this.type = type;
-    this.measurementId = measurementId;
+    this.measurementPath = measurementPath;
   }
 
   /**
    * Construct one data point with data type and value.
    *
    * @param dataType data type
-   * @param measurementId measurement id
+   * @param measurementPath measurement path
    * @param value value in string format
    * @return data point class according to data type
    */
-  public static DataPoint getDataPoint(TSDataType dataType, String measurementId, String value) {
+  public static DataPoint getDataPoint(TSDataType dataType, String measurementPath, String value) {
     DataPoint dataPoint = null;
     try {
       switch (dataType) {
         case INT32:
-          dataPoint = new IntDataPoint(measurementId, Integer.valueOf(value));
+          dataPoint = new IntDataPoint(measurementPath, Integer.valueOf(value));
           break;
         case INT64:
-          dataPoint = new LongDataPoint(measurementId, Long.valueOf(value));
+          dataPoint = new LongDataPoint(measurementPath, Long.valueOf(value));
           break;
         case FLOAT:
-          dataPoint = new FloatDataPoint(measurementId, Float.valueOf(value));
+          dataPoint = new FloatDataPoint(measurementPath, Float.valueOf(value));
           break;
         case DOUBLE:
-          dataPoint = new DoubleDataPoint(measurementId, Double.valueOf(value));
+          dataPoint = new DoubleDataPoint(measurementPath, Double.valueOf(value));
           break;
         case BOOLEAN:
-          dataPoint = new BooleanDataPoint(measurementId, Boolean.valueOf(value));
+          dataPoint = new BooleanDataPoint(measurementPath, Boolean.valueOf(value));
           break;
         case TEXT:
-          dataPoint = new StringDataPoint(measurementId, new Binary(value));
+          dataPoint = new StringDataPoint(measurementPath, new Binary(value));
           break;
         default:
           throw new UnSupportedDataTypeException(
@@ -90,8 +91,8 @@ public abstract class DataPoint {
       }
     } catch (Exception e) {
       throw new UnSupportedDataTypeException(
-          String.format("Data type of %s is %s, but input value is %s", measurementId, dataType,
-              value));
+          String.format("Data type of %s is %s, but input value is %s", measurementPath,
+              dataType, value));
     }
 
     return dataPoint;
@@ -106,8 +107,8 @@ public abstract class DataPoint {
    */
   public abstract void writeTo(long time, IChunkWriter writer) throws IOException;
 
-  public String getMeasurementId() {
-    return measurementId;
+  public String getMeasurementPath() {
+    return measurementPath;
   }
 
   public abstract Object getValue();
@@ -119,7 +120,7 @@ public abstract class DataPoint {
   @Override
   public String toString() {
     StringContainer sc = new StringContainer(" ");
-    sc.addTail("{measurement id:", measurementId, "type:", type, "value:", getValue(), "}");
+    sc.addTail("{measurement path:", measurementPath, "type:", type, "value:", getValue(), "}");
     return sc.toString();
   }
 

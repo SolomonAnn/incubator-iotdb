@@ -21,18 +21,17 @@ package org.apache.iotdb.tsfile.write;
 import java.io.File;
 import java.io.IOException;
 import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
-import org.apache.iotdb.tsfile.constant.TestConstant;
+import org.apache.iotdb.tsfile.exception.NotCompatibleException;
 import org.apache.iotdb.tsfile.file.MetaMarker;
 import org.apache.iotdb.tsfile.file.footer.ChunkGroupFooter;
 import org.apache.iotdb.tsfile.file.header.ChunkHeader;
 import org.apache.iotdb.tsfile.file.metadata.TimeSeriesMetadataTest;
-import org.apache.iotdb.tsfile.file.metadata.TsFileMetadata;
+import org.apache.iotdb.tsfile.file.metadata.TsFileMetaData;
 import org.apache.iotdb.tsfile.file.metadata.statistics.Statistics;
 import org.apache.iotdb.tsfile.file.metadata.utils.TestHelper;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.schema.Schema;
+import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.writer.TsFileIOWriter;
 import org.junit.After;
 import org.junit.Assert;
@@ -41,33 +40,31 @@ import org.junit.Test;
 
 public class TsFileIOWriterTest {
 
-  private static String tsfile = TestConstant.BASE_OUTPUT_PATH.concat("tsfileIOWriterTest.tsfile");
-  private static String deviceId = "device1";
+  private static String tsfile = "target/tsfileIOWriterTest.tsfile";
+  private static String devicePath = "device1";
 
   @Before
   public void before() throws IOException {
     TsFileIOWriter writer = new TsFileIOWriter(new File(tsfile));
 
     // file schema
-    MeasurementSchema measurementSchema = TestHelper.createSimpleMeasurementSchema("sensor01");
+    MeasurementSchema measurementSchema = TestHelper.createSimpleMeasurementSchema();
     Schema schema = new Schema();
-    schema.registerTimeseries(new Path(deviceId, "sensor01"), measurementSchema);
+    schema.registerMeasurement(measurementSchema);
 
     // chunk statistics
     Statistics statistics = Statistics.getStatsByType(measurementSchema.getType());
-    statistics.updateStats(0L, 0L);
+    statistics.updateStats(0L);
 
     // chunk group 1
-    writer.startChunkGroup(deviceId);
+    writer.startChunkGroup(devicePath);
     writer.startFlushChunk(measurementSchema, measurementSchema.getCompressor(),
-        measurementSchema.getType(),
-        measurementSchema.getEncodingType(), statistics, 0, 0);
-    writer.endCurrentChunk();
-    writer.endChunkGroup();
+        measurementSchema.getType(), measurementSchema.getEncodingType(), statistics, 0, 0, 0, 0);
+    writer.endChunk(0);
+    writer.endChunkGroup(0);
 
-    writer.writeVersion(0L);
     // end file
-    writer.endFile();
+    writer.endFile(schema);
   }
 
   @After
@@ -79,7 +76,7 @@ public class TsFileIOWriterTest {
   }
 
   @Test
-  public void endFileTest() throws IOException {
+  public void endFileTest() throws IOException, NotCompatibleException {
     TsFileSequenceReader reader = new TsFileSequenceReader(tsfile);
 
     // magic_string
@@ -88,8 +85,7 @@ public class TsFileIOWriterTest {
     Assert.assertEquals(TSFileConfig.MAGIC_STRING, reader.readTailMagic());
 
     // chunk header
-    reader.position(TSFileConfig.MAGIC_STRING.getBytes().length + TSFileConfig.VERSION_NUMBER
-        .getBytes().length);
+    reader.position(TSFileConfig.MAGIC_STRING.getBytes().length + TSFileConfig.VERSION_NUMBER.getBytes().length);
     Assert.assertEquals(MetaMarker.CHUNK_HEADER, reader.readMarker());
     ChunkHeader header = reader.readChunkHeader();
     Assert.assertEquals(TimeSeriesMetadataTest.measurementUID, header.getMeasurementID());
@@ -97,17 +93,16 @@ public class TsFileIOWriterTest {
     // chunk group footer
     Assert.assertEquals(MetaMarker.CHUNK_GROUP_FOOTER, reader.readMarker());
     ChunkGroupFooter footer = reader.readChunkGroupFooter();
-    Assert.assertEquals(deviceId, footer.getDeviceID());
+    Assert.assertEquals(devicePath, footer.getDevicePath());
 
     // separator
-    Assert.assertEquals(MetaMarker.VERSION, reader.readMarker());
-
-    reader.readVersion();
-
     Assert.assertEquals(MetaMarker.SEPARATOR, reader.readMarker());
 
     // FileMetaData
-    TsFileMetadata metaData = reader.readFileMetadata();
-    Assert.assertEquals(1, metaData.getMetadataIndex().getChildren().size());
+    TsFileMetaData metaData = reader.readFileMetadata();
+    MeasurementSchema actual = metaData.getMeasurementSchema()
+        .get(TimeSeriesMetadataTest.measurementUID);
+    Assert.assertEquals(TimeSeriesMetadataTest.measurementUID, actual.getMeasurementId());
+    Assert.assertEquals(1, metaData.getDeviceMap().size());
   }
 }
