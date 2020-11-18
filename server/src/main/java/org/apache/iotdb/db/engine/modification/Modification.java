@@ -45,12 +45,12 @@ public abstract class Modification {
     return path;
   }
 
-  public String getDevicePath() {
-    return path.getDevicePath();
+  public String getDevice() {
+    return path.getDevice();
   }
 
-  public String getMeasurementPath() {
-    return path.getMeasurementPath();
+  public String getMeasurement() {
+    return path.getMeasurement();
   }
 
   public void setPath(PartialPath path) {

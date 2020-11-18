@@ -16,68 +16,54 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.iotdb.db.qp.physical.crud;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
+import org.apache.iotdb.db.metadata.MetaUtils;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.logical.Operator;
-import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.utils.SchemaUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.write.record.TSRecord;
 
-public class InsertPlan extends PhysicalPlan {
+public abstract class InsertPlan extends PhysicalPlan {
 
-  private String devicePath;
-  private String[] measurementPaths;
-  private TSDataType[] dataTypes;
-  private String[] values;
-  private long time;
+  protected PartialPath deviceId;
+  protected String[] measurements;
+  // get from client
+  protected TSDataType[] dataTypes;
+  // get from MManager
+  protected MeasurementMNode[] measurementMNodes;
 
-  public InsertPlan() {
-    super(false, OperatorType.INSERT);
+  // record the failed measurements, their reasons, and positions in "measurements"
+  List<String> failedMeasurements;
+  private List<Exception> failedExceptions;
+  private List<Integer> failedIndices;
+
+  public InsertPlan(Operator.OperatorType operatorType) {
+    super(false, operatorType);
+    super.canBeSplit = false;
   }
 
-  public InsertPlan(String devicePath, long insertTime, String measurementPath, String insertValue) {
-    super(false, OperatorType.INSERT);
-    this.time = insertTime;
-    this.devicePath = devicePath;
-    this.measurementPaths = new String[] {measurementPath};
-    this.values = new String[] {insertValue};
+  public PartialPath getDeviceId() {
+    return deviceId;
   }
 
-  public InsertPlan(TSRecord tsRecord) {
-    super(false, OperatorType.INSERT);
-    this.devicePath = tsRecord.devicePath;
-    this.time = tsRecord.time;
-    this.measurementPaths = new String[tsRecord.dataPointList.size()];
-    this.dataTypes = new TSDataType[tsRecord.dataPointList.size()];
-    this.values = new String[tsRecord.dataPointList.size()];
-    for (int i = 0; i < tsRecord.dataPointList.size(); i++) {
-      measurementPaths[i] = tsRecord.dataPointList.get(i).getMeasurementPath();
-      dataTypes[i] = tsRecord.dataPointList.get(i).getType();
-      values[i] = tsRecord.dataPointList.get(i).getValue().toString();
-    }
+  public void setDeviceId(PartialPath deviceId) {
+    this.deviceId = deviceId;
   }
 
-  public InsertPlan(String devicePath, long insertTime, String[] measurementList, String[] insertValues) {
-    super(false, Operator.OperatorType.INSERT);
-    this.time = insertTime;
-    this.devicePath = devicePath;
-    this.measurementPaths = measurementList;
-    this.values = insertValues;
+  public String[] getMeasurements() {
+    return this.measurements;
   }
 
-  public long getTime() {
-    return time;
-  }
-
-  public void setTime(long time) {
-    this.time = time;
+  public void setMeasurements(String[] measurements) {
+    this.measurements = measurements;
   }
 
   public TSDataType[] getDataTypes() {
@@ -88,98 +74,89 @@ public class InsertPlan extends PhysicalPlan {
     this.dataTypes = dataTypes;
   }
 
-  @Override
-  public List<Path> getPaths() {
-    List<Path> ret = new ArrayList<>();
+  public MeasurementMNode[] getMeasurementMNodes() {
+    return measurementMNodes;
+  }
 
-    for (String m : measurementPaths) {
-      ret.add(new Path(devicePath, m));
+  public void setMeasurementMNodes(MeasurementMNode[] mNodes) {
+    this.measurementMNodes = mNodes;
+  }
+
+  public List<String> getFailedMeasurements() {
+    return failedMeasurements;
+  }
+
+  public List<Exception> getFailedExceptions() {
+    return failedExceptions;
+  }
+
+  public int getFailedMeasurementNumber() {
+    return failedMeasurements == null ? 0 : failedMeasurements.size();
+  }
+
+  public abstract long getMinTime();
+
+  /**
+   * @param index failed measurement index
+   */
+  public void markFailedMeasurementInsertion(int index, Exception e) {
+    if (measurements[index] == null) {
+      return;
     }
-    return ret;
-  }
-
-  public String getDevicePath() {
-    return this.devicePath;
-  }
-
-  public void setDevicePath(String devicePath) {
-    this.devicePath = devicePath;
-  }
-
-  public String[] getMeasurementPaths() {
-    return this.measurementPaths;
-  }
-
-  public void setMeasurementPaths(String[] measurementPaths) {
-    this.measurementPaths = measurementPaths;
-  }
-
-  public String[] getValues() {
-    return this.values;
-  }
-
-  public void setValues(String[] values) {
-    this.values = values;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
+    if (failedMeasurements == null) {
+      failedMeasurements = new ArrayList<>();
+      failedExceptions = new ArrayList<>();
+      failedIndices = new ArrayList<>();
     }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    InsertPlan that = (InsertPlan) o;
-    return time == that.time && Objects.equals(devicePath, that.devicePath)
-        && Arrays.equals(measurementPaths, that.measurementPaths)
-        && Arrays.equals(values, that.values);
+    failedMeasurements.add(measurements[index]);
+    failedExceptions.add(e);
+    failedIndices.add(index);
+    measurements[index] = null;
+    dataTypes[index] = null;
   }
 
-  @Override
-  public int hashCode() {
-    return Objects.hash(devicePath, time);
-  }
-
-  @Override
-  public void serializeTo(ByteBuffer buffer) {
-    int type = PhysicalPlanType.INSERT.ordinal();
-    buffer.put((byte) type);
-    buffer.putLong(time);
-
-    putString(buffer, devicePath);
-
-    buffer.putInt(measurementPaths.length);
-    for (String m : measurementPaths) {
-      putString(buffer, m);
+  /**
+   * Reconstruct this plan with the failed measurements.
+   * @return the plan itself, with measurements replaced with the previously failed ones.
+   */
+  public InsertPlan getPlanFromFailed() {
+    if (failedMeasurements == null) {
+      return null;
     }
-
-    buffer.putInt(values.length);
-    for (String m : values) {
-      putString(buffer, m);
+    measurements = failedMeasurements.toArray(new String[0]);
+    failedMeasurements = null;
+    if (dataTypes != null) {
+      TSDataType[] temp = dataTypes.clone();
+      dataTypes = new TSDataType[failedIndices.size()];
+      for (int i = 0; i < failedIndices.size(); i++) {
+        dataTypes[i] = temp[failedIndices.get(i)];
+      }
     }
-  }
-
-  @Override
-  public void deserializeFrom(ByteBuffer buffer) {
-    this.time = buffer.getLong();
-    this.devicePath = readString(buffer);
-
-    int measurementPathsSize = buffer.getInt();
-    this.measurementPaths = new String[measurementPathsSize];
-    for (int i = 0; i < measurementPathsSize; i++) {
-      measurementPaths[i] = readString(buffer);
+    if (measurementMNodes != null) {
+      MeasurementMNode[] temp = measurementMNodes.clone();
+      measurementMNodes = new MeasurementMNode[failedIndices.size()];
+      for (int i = 0; i < failedIndices.size(); i++) {
+        measurementMNodes[i] = temp[failedIndices.get(i)];
+      }
     }
 
-    int valueSize = buffer.getInt();
-    this.values = new String[valueSize];
-    for (int i = 0; i < valueSize; i++) {
-      values[i] = readString(buffer);
-    }
+    failedIndices = null;
+    failedExceptions = null;
+    return this;
   }
 
   @Override
-  public String toString() {
-    return "devicePath: " + devicePath + ", time: " + time;
+  public void checkIntegrity() throws QueryProcessException {
+    if (deviceId == null) {
+      throw new QueryProcessException("DeviceId is null");
+    }
+    if (measurements == null) {
+      throw new QueryProcessException("Measurements are null");
+    }
+    for (String measurement : measurements) {
+      if (measurement == null || measurement.isEmpty()) {
+        throw new QueryProcessException("Measurement contains null or empty string: " + Arrays.toString(measurements));
+      }
+    }
   }
 }

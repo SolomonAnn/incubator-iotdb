@@ -20,8 +20,6 @@ package org.apache.iotdb.db.sync.receiver.load;
 
 import java.io.File;
 import java.io.IOException;
-
-import org.apache.iotdb.db.exception.PathErrorException;
 import org.apache.iotdb.db.sync.receiver.load.FileLoader.LoadTask;
 
 /**
@@ -51,7 +49,7 @@ public interface IFileLoader {
   /**
    * Handle load task by type.
    */
-  void handleLoadTask(LoadTask task) throws IOException, PathErrorException;
+  void handleLoadTask(LoadTask task) throws IOException;
 
   /**
    * Set current load type

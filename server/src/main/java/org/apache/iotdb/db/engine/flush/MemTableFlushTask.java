@@ -1,15 +1,19 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements.  See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership.  The ASF licenses this file to you under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with the License.  You may obtain
- * a copy of the License at
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied.  See the License for the specific language governing permissions and limitations
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
  * under the License.
  */
 package org.apache.iotdb.db.engine.flush;
@@ -18,23 +22,16 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
-import org.apache.iotdb.db.engine.memtable.ChunkBufferPool;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
-import org.apache.iotdb.db.exception.FlushRunTimeException;
-import org.apache.iotdb.db.exception.PathErrorException;
-import org.apache.iotdb.db.exception.StorageGroupException;
-import org.apache.iotdb.db.metadata.MManager;
+import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
-import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.Pair;
-import org.apache.iotdb.tsfile.write.chunk.ChunkBuffer;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
-import org.apache.iotdb.tsfile.write.schema.Schema;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.apache.iotdb.tsfile.write.writer.RestorableTsFileIOWriter;
 import org.slf4j.Logger;
@@ -43,76 +40,96 @@ import org.slf4j.LoggerFactory;
 public class MemTableFlushTask {
 
   private static final Logger logger = LoggerFactory.getLogger(MemTableFlushTask.class);
-  private static final int PAGE_SIZE_THRESHOLD = TSFileDescriptor.getInstance().getConfig().getPageSizeInByte();
   private static final FlushSubTaskPoolManager subTaskPoolManager = FlushSubTaskPoolManager
       .getInstance();
-  private Future ioTaskFuture;
+  private final Future<?> encodingTaskFuture;
+  private final Future<?> ioTaskFuture;
   private RestorableTsFileIOWriter writer;
 
-  private ConcurrentLinkedQueue ioTaskQueue = new ConcurrentLinkedQueue();
-  private ConcurrentLinkedQueue encodingTaskQueue = new ConcurrentLinkedQueue();
+  private final ConcurrentLinkedQueue<Object> ioTaskQueue = new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<Object> encodingTaskQueue = new ConcurrentLinkedQueue<>();
   private String storageGroup;
 
   private IMemTable memTable;
-  private Schema schema;
 
   private volatile boolean noMoreEncodingTask = false;
   private volatile boolean noMoreIOTask = false;
 
-  public MemTableFlushTask(IMemTable memTable, Schema schema, RestorableTsFileIOWriter writer, String storageGroup) {
+  /**
+   * @param memTable the memTable to flush
+   * @param writer the writer where memTable will be flushed to (current tsfile writer or vm writer)
+   * @param storageGroup current storage group
+   */
+
+  public MemTableFlushTask(IMemTable memTable, RestorableTsFileIOWriter writer, String storageGroup) {
     this.memTable = memTable;
-    this.schema = schema;
     this.writer = writer;
     this.storageGroup = storageGroup;
-    subTaskPoolManager.submit(encodingTask);
+    this.encodingTaskFuture = subTaskPoolManager.submit(encodingTask);
     this.ioTaskFuture = subTaskPoolManager.submit(ioTask);
     logger.debug("flush task of Storage group {} memtable {} is created ",
         storageGroup, memTable.getVersion());
   }
 
-
   /**
    * the function for flushing memtable.
    */
-  public void syncFlushMemTable() throws ExecutionException, InterruptedException, PathErrorException, StorageGroupException {
+  public void syncFlushMemTable()
+      throws ExecutionException, InterruptedException, IOException {
+    logger.info("The memTable size of SG {} is {}, the avg series points num in chunk is {} ",
+        storageGroup,
+        memTable.memSize(),
+        memTable.getTotalPointsNum() / memTable.getSeriesNumber());
     long start = System.currentTimeMillis();
     long sortTime = 0;
-    String devicePath;
-    for (Long deviceId : memTable.getMemTableMap().keySet()) {
-      devicePath = MManager.getInstance().getDevicePathById(deviceId);
-      encodingTaskQueue.add(new StartFlushGroupIOTask(devicePath));
-      for (Long measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
+
+    for (String deviceId : memTable.getMemTableMap().keySet()) {
+      encodingTaskQueue.add(new StartFlushGroupIOTask(deviceId));
+      for (String measurementId : memTable.getMemTableMap().get(deviceId).keySet()) {
         long startTime = System.currentTimeMillis();
         IWritableMemChunk series = memTable.getMemTableMap().get(deviceId).get(measurementId);
-        MeasurementSchema desc = schema.getMeasurementSchema(
-            MManager.getInstance().getMeasurementPathById(devicePath, measurementId));
+        MeasurementSchema desc = series.getSchema();
         TVList tvList = series.getSortedTVList();
         sortTime += System.currentTimeMillis() - startTime;
         encodingTaskQueue.add(new Pair<>(tvList, desc));
       }
-      encodingTaskQueue.add(new EndChunkGroupIoTask(memTable.getVersion()));
+      encodingTaskQueue.add(new EndChunkGroupIoTask());
     }
     noMoreEncodingTask = true;
     logger.debug(
         "Storage group {} memtable {}, flushing into disk: data sort time cost {} ms.",
         storageGroup, memTable.getVersion(), sortTime);
 
+    try {
+      encodingTaskFuture.get();
+    } catch (InterruptedException | ExecutionException e) {
+      // avoid ioTask waiting forever
+      noMoreIOTask = true;
+      ioTaskFuture.cancel(true);
+      throw e;
+    }
+
     ioTaskFuture.get();
+
+    try {
+      writer.writeVersion(memTable.getVersion());
+    } catch (IOException e) {
+      throw new ExecutionException(e);
+    }
 
     logger.info(
         "Storage group {} memtable {} flushing a memtable has finished! Time consumption: {}ms",
         storageGroup, memTable, System.currentTimeMillis() - start);
   }
 
-
   private Runnable encodingTask = new Runnable() {
     private void writeOneSeries(TVList tvPairs, IChunkWriter seriesWriterImpl,
-        TSDataType dataType){
+        TSDataType dataType) {
       for (int i = 0; i < tvPairs.size(); i++) {
         long time = tvPairs.getTime(i);
 
         // skip duplicated data
-        if ((i+1 < tvPairs.size() && (time == tvPairs.getTime(i+1)))) {
+        if ((i + 1 < tvPairs.size() && (time == tvPairs.getTime(i + 1)))) {
           continue;
         }
 
@@ -143,6 +160,7 @@ public class MemTableFlushTask {
       }
     }
 
+    @SuppressWarnings("squid:S135")
     @Override
     public void run() {
       long memSerializeTime = 0;
@@ -159,23 +177,20 @@ public class MemTableFlushTask {
             break;
           }
           try {
-            Thread.sleep(10);
-          } catch (InterruptedException e) {
+            TimeUnit.MILLISECONDS.sleep(10);
+          } catch (@SuppressWarnings("squid:S2142") InterruptedException e) {
             logger.error("Storage group {} memtable {}, encoding task is interrupted.",
                 storageGroup, memTable.getVersion(), e);
-            Thread.currentThread().interrupt();
+            // generally it is because the thread pool is shutdown so the task should be aborted
+            break;
           }
         } else {
-          if (task instanceof StartFlushGroupIOTask) {
-            ioTaskQueue.add(task);
-          } else if (task instanceof EndChunkGroupIoTask) {
+          if (task instanceof StartFlushGroupIOTask || task instanceof EndChunkGroupIoTask) {
             ioTaskQueue.add(task);
           } else {
             long starTime = System.currentTimeMillis();
             Pair<TVList, MeasurementSchema> encodingMessage = (Pair<TVList, MeasurementSchema>) task;
-            ChunkBuffer chunkBuffer = ChunkBufferPool.getInstance()
-                .getEmptyChunkBuffer(this, encodingMessage.right);
-            IChunkWriter seriesWriter = new ChunkWriterImpl(chunkBuffer, PAGE_SIZE_THRESHOLD);
+            IChunkWriter seriesWriter = new ChunkWriterImpl(encodingMessage.right);
             writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right.getType());
             ioTaskQueue.add(seriesWriter);
             memSerializeTime += System.currentTimeMillis() - starTime;
@@ -189,6 +204,7 @@ public class MemTableFlushTask {
     }
   };
 
+  @SuppressWarnings("squid:S135")
   private Runnable ioTask = () -> {
     long ioTime = 0;
     boolean returnWhenNoTask = false;
@@ -203,24 +219,23 @@ public class MemTableFlushTask {
           break;
         }
         try {
-          Thread.sleep(10);
-        } catch (InterruptedException e) {
-          logger.error("Storage group {} memtable, io task is interrupted.", storageGroup
+          TimeUnit.MILLISECONDS.sleep(10);
+        } catch (@SuppressWarnings("squid:S2142") InterruptedException e) {
+          logger.error("Storage group {} memtable {}, io task is interrupted.", storageGroup
               , memTable.getVersion(), e);
-          Thread.currentThread().interrupt();
+          // generally it is because the thread pool is shutdown so the task should be aborted
+          break;
         }
       } else {
         long starTime = System.currentTimeMillis();
         try {
           if (ioMessage instanceof StartFlushGroupIOTask) {
-            writer.startChunkGroup(((StartFlushGroupIOTask) ioMessage).device);
+            this.writer.startChunkGroup(((StartFlushGroupIOTask) ioMessage).deviceId);
           } else if (ioMessage instanceof IChunkWriter) {
             ChunkWriterImpl chunkWriter = (ChunkWriterImpl) ioMessage;
-            chunkWriter.writeToFileWriter(MemTableFlushTask.this.writer);
-            ChunkBufferPool.getInstance().putBack(chunkWriter.getChunkBuffer());
+            chunkWriter.writeToFileWriter(this.writer);
           } else {
-            EndChunkGroupIoTask endGroupTask = (EndChunkGroupIoTask) ioMessage;
-            writer.endChunkGroup(endGroupTask.version);
+            this.writer.endChunkGroup();
           }
         } catch (IOException e) {
           logger.error("Storage group {} memtable {}, io task meets error.", storageGroup,
@@ -235,19 +250,18 @@ public class MemTableFlushTask {
   };
 
   static class EndChunkGroupIoTask {
-    private long version;
 
-    EndChunkGroupIoTask(long version) {
-      this.version = version;
+    EndChunkGroupIoTask() {
+
     }
   }
 
   static class StartFlushGroupIOTask {
-    private String device;
 
-    StartFlushGroupIOTask(String device) {
-      this.device = device;
+    private final String deviceId;
+
+    StartFlushGroupIOTask(String deviceId) {
+      this.deviceId = deviceId;
     }
   }
-
 }
