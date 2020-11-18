@@ -42,15 +42,15 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
 
   private static final Logger LOG = LoggerFactory.getLogger(ChunkGroupWriterImpl.class);
 
-  private final String devicePath;
+  private final String deviceId;
 
   /**
    * Map(measurementID, ChunkWriterImpl).
    */
   private Map<String, IChunkWriter> chunkWriters = new HashMap<>();
 
-  public ChunkGroupWriterImpl(String devicePath) {
-    this.devicePath = devicePath;
+  public ChunkGroupWriterImpl(String deviceId) {
+    this.deviceId = deviceId;
   }
 
   @Override
@@ -64,7 +64,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
   @Override
   public void write(long time, List<DataPoint> data) throws WriteProcessException, IOException {
     for (DataPoint point : data) {
-      String measurementId = point.getMeasurementPath();
+      String measurementId = point.getMeasurementId();
       if (!chunkWriters.containsKey(measurementId)) {
         throw new NoMeasurementException(
             "time " + time + ", measurement id " + measurementId + " not found!");
@@ -88,7 +88,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
   }
 
   private void writeByDataType(
-          Tablet tablet, String measurementId, TSDataType dataType, int index) throws IOException {
+      Tablet tablet, String measurementId, TSDataType dataType, int index) throws IOException {
     int batchSize = tablet.rowSize;
     switch (dataType) {
       case INT32:
@@ -111,13 +111,13 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
         break;
       default:
         throw new UnSupportedDataTypeException(
-                String.format("Data type %s is not supported.", dataType));
+            String.format("Data type %s is not supported.", dataType));
     }
   }
 
   @Override
   public long flushToFileWriter(TsFileIOWriter fileWriter) throws IOException {
-    LOG.debug("start flush device id:{}", devicePath);
+    LOG.debug("start flush device id:{}", deviceId);
     // make sure all the pages have been compressed into buffers, so that we can get correct
     // groupWriter.getCurrentChunkGroupSize().
     sealAllChunks();

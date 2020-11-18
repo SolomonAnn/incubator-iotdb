@@ -101,8 +101,8 @@ public class HDFSTSRecord implements Writable {
     out.writeInt(dataPointList.size());
     for (DataPoint dataPoint : dataPointList) {
       out.writeShort(dataPoint.getType().serialize());
-      out.writeInt(dataPoint.getMeasurementPath().getBytes(StandardCharsets.UTF_8).length);
-      out.write(dataPoint.getMeasurementPath().getBytes(StandardCharsets.UTF_8));
+      out.writeInt(dataPoint.getMeasurementId().getBytes(StandardCharsets.UTF_8).length);
+      out.write(dataPoint.getMeasurementId().getBytes(StandardCharsets.UTF_8));
       switch (dataPoint.getType()) {
         case BOOLEAN:
           out.writeBoolean((boolean) dataPoint.getValue());
