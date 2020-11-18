@@ -231,14 +231,14 @@ class ConverterTest extends FunSuite with BeforeAndAfterAll {
 
     Assert.assertEquals(2, records.size)
     Assert.assertEquals(1, records(0).time)
-    Assert.assertEquals("device_2", records(0).devicePath)
+    Assert.assertEquals("device_2", records(0).deviceId)
     val dataPoints1 = records(0).dataPointList
     Assert.assertEquals("{measurement id: sensor_3 type: INT32 value: 19 }", dataPoints1.get(0).toString)
     Assert.assertEquals("{measurement id: sensor_1 type: FLOAT value: 2.3 }", dataPoints1.get(1).toString)
     Assert.assertEquals("{measurement id: sensor_2 type: INT32 value: 11 }", dataPoints1.get(2).toString)
 
     Assert.assertEquals(1, records(1).time)
-    Assert.assertEquals("device_1", records(1).devicePath)
+    Assert.assertEquals("device_1", records(1).deviceId)
     val dataPoints2 = records(1).dataPointList
     Assert.assertEquals("{measurement id: sensor_1 type: FLOAT value: 1.2 }", dataPoints2.get(0).toString)
     Assert.assertEquals("{measurement id: sensor_2 type: INT32 value: 20 }", dataPoints2.get(1).toString)

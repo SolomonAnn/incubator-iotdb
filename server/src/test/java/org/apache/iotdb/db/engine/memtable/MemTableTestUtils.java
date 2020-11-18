@@ -18,8 +18,6 @@
  */
 package org.apache.iotdb.db.engine.memtable;
 
-import org.apache.iotdb.db.exception.PathErrorException;
-import org.apache.iotdb.db.exception.StorageGroupException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.common.Path;
@@ -37,12 +35,12 @@ public class MemTableTestUtils {
 
   static {
     schema
-        .registerTimeseries(new Path(deviceId0, measurementId0), 
+        .registerTimeseries(new Path(deviceId0, measurementId0),
             new MeasurementSchema(measurementId0, dataType0, TSEncoding.PLAIN));
   }
 
   public static void produceData(IMemTable iMemTable, long startTime, long endTime, String deviceId,
-      String measurementId, TSDataType dataType) throws PathErrorException, StorageGroupException {
+      String measurementId, TSDataType dataType) {
     if (startTime > endTime) {
       throw new RuntimeException(String.format("start time %d > end time %d", startTime, endTime));
     }

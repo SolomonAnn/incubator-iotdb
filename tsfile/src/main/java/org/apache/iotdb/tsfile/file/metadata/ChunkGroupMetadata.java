@@ -25,20 +25,20 @@ import java.util.List;
  */
 public class ChunkGroupMetadata {
 
-	private String device;
+  private String device;
 
-	private List<ChunkMetadata> chunkMetadataList;
+  private List<ChunkMetadata> chunkMetadataList;
 
-	public ChunkGroupMetadata(String device, List<ChunkMetadata> chunkMetadataList) {
-		this.device = device;
-		this.chunkMetadataList = chunkMetadataList;
-	}
+  public ChunkGroupMetadata(String device, List<ChunkMetadata> chunkMetadataList) {
+    this.device = device;
+    this.chunkMetadataList = chunkMetadataList;
+  }
 
-	public String getDevice() {
-		return device;
-	}
+  public String getDevice() {
+    return device;
+  }
 
-	public List<ChunkMetadata> getChunkMetadataList() {
-		return chunkMetadataList;
-	}
+  public List<ChunkMetadata> getChunkMetadataList() {
+    return chunkMetadataList;
+  }
 }

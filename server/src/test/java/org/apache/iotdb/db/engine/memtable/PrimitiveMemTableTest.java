@@ -18,22 +18,25 @@
  */
 package org.apache.iotdb.db.engine.memtable;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Random;
 
-import org.apache.iotdb.db.exception.PathErrorException;
-import org.apache.iotdb.db.exception.StorageGroupException;
+import org.apache.iotdb.db.engine.querycontext.ReadOnlyMemChunk;
+import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.utils.MathUtils;
-import org.apache.iotdb.db.utils.TimeValuePair;
-import org.apache.iotdb.db.utils.TsPrimitiveType;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.common.conf.TSFileConfig;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.exception.write.UnSupportedDataTypeException;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.read.reader.IPointReader;
+import org.apache.iotdb.tsfile.read.TimeValuePair;
 import org.apache.iotdb.tsfile.utils.Binary;
+import org.apache.iotdb.tsfile.utils.TsPrimitiveType;
+import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,62 +51,63 @@ public class PrimitiveMemTableTest {
   }
 
   @Test
-  public void memSeriesCloneTest() {
+  public void memSeriesSortIteratorTest() throws IOException {
     TSDataType dataType = TSDataType.INT32;
-    WritableMemChunk series = new WritableMemChunk(dataType, TVList.newList(dataType));
+    WritableMemChunk series = new WritableMemChunk(new MeasurementSchema("s1", dataType, TSEncoding.PLAIN), TVList.newList(dataType));
     int count = 1000;
     for (int i = 0; i < count; i++) {
-      series.write(i, String.valueOf(i));
+      series.write(i, i);
     }
-    Iterator<TimeValuePair> it = series.getSortedTimeValuePairList().iterator();
+    IPointReader it = series.getSortedTVList().getIterator();
     int i = 0;
-    while (it.hasNext()) {
-      Assert.assertEquals(i, it.next().getTimestamp());
+    while (it.hasNextTimeValuePair()) {
+      Assert.assertEquals(i, it.nextTimeValuePair().getTimestamp());
       i++;
     }
     Assert.assertEquals(count, i);
   }
 
   @Test
-  public void simpleTest() throws PathErrorException, StorageGroupException {
+  public void simpleTest() throws IOException, QueryProcessException, MetadataException {
     IMemTable memTable = new PrimitiveMemTable();
     int count = 10;
-    String devicePath = "d1";
-    String measurementPaths[] = new String[count];
-    for (int i = 0; i < measurementPaths.length; i++) {
-      measurementPaths[i] = "s" + i;
+    String deviceId = "d1";
+    String measurementId[] = new String[count];
+    for (int i = 0; i < measurementId.length; i++) {
+      measurementId[i] = "s" + i;
     }
 
     int dataSize = 10000;
     for (int i = 0; i < dataSize; i++) {
-      memTable.write(devicePath, measurementPaths[0], TSDataType.INT32, dataSize - i - 1,
-          String.valueOf(i + 10));
+      memTable.write(deviceId, measurementId[0], new MeasurementSchema(measurementId[0], TSDataType.INT32, TSEncoding.PLAIN), dataSize - i - 1,
+          i + 10);
     }
     for (int i = 0; i < dataSize; i++) {
-      memTable.write(devicePath, measurementPaths[0], TSDataType.INT32, i, String.valueOf(i));
+      memTable.write(deviceId, measurementId[0], new MeasurementSchema(measurementId[0], TSDataType.INT32, TSEncoding.PLAIN), i, i);
     }
-    Iterator<TimeValuePair> tvPair = memTable
-        .query(devicePath, measurementPaths[0], TSDataType.INT32, Collections.emptyMap(), Long.MIN_VALUE)
-        .getSortedTimeValuePairList().iterator();
+    ReadOnlyMemChunk memChunk = memTable
+        .query(deviceId, measurementId[0], TSDataType.INT32, TSEncoding.RLE, Collections.emptyMap(),
+            Long.MIN_VALUE);
+    IPointReader iterator = memChunk.getPointReader();
     for (int i = 0; i < dataSize; i++) {
-      TimeValuePair timeValuePair = tvPair.next();
+      iterator.hasNextTimeValuePair();
+      TimeValuePair timeValuePair = iterator.nextTimeValuePair();
       Assert.assertEquals(i, timeValuePair.getTimestamp());
       Assert.assertEquals(i, timeValuePair.getValue().getValue());
     }
   }
 
-  private void write(IMemTable memTable, String devicePath, String sensorId, TSDataType dataType,
-      int size) throws PathErrorException, StorageGroupException {
+  private void write(IMemTable memTable, String deviceId, String sensorId, TSDataType dataType,
+      TSEncoding encoding, int size) throws IOException, QueryProcessException, MetadataException {
     TimeValuePair[] ret = genTimeValuePair(size, dataType);
 
-    for (int i = 0; i < ret.length; i++) {
-      memTable.write(devicePath, sensorId, dataType, ret[i].getTimestamp(),
-          ret[i].getValue().getStringValue());
+    for (TimeValuePair aRet : ret) {
+      memTable.write(deviceId, sensorId, new MeasurementSchema(sensorId, dataType, encoding), aRet.getTimestamp(),
+          aRet.getValue().getValue());
     }
-    Iterator<TimeValuePair> tvPair = memTable
-        .query(devicePath, sensorId, dataType, Collections.emptyMap(), Long.MIN_VALUE)
-        .getSortedTimeValuePairList()
-        .iterator();
+    IPointReader tvPair = memTable
+        .query(deviceId, sensorId, dataType, encoding, Collections.emptyMap(), Long.MIN_VALUE)
+        .getPointReader();
     Arrays.sort(ret);
     TimeValuePair last = null;
     for (int i = 0; i < ret.length; i++) {
@@ -115,7 +119,8 @@ public class PrimitiveMemTableTest {
       }
       TimeValuePair pair = ret[i];
       last = pair;
-      TimeValuePair next = tvPair.next();
+      tvPair.hasNextTimeValuePair();
+      TimeValuePair next = tvPair.nextTimeValuePair();
       Assert.assertEquals(pair.getTimestamp(), next.getTimestamp());
       if (dataType == TSDataType.DOUBLE) {
         Assert.assertEquals(pair.getValue().getDouble(),
@@ -123,7 +128,7 @@ public class PrimitiveMemTableTest {
       } else if (dataType == TSDataType.FLOAT) {
         float expected = pair.getValue().getFloat();
         float actual = MathUtils.roundWithGivenPrecision(next.getValue().getFloat());
-        Assert.assertEquals(expected, actual, delta+ Float.MIN_NORMAL);
+        Assert.assertEquals(expected, actual, delta + Float.MIN_NORMAL);
       } else {
         Assert.assertEquals(pair.getValue(), next.getValue());
       }
@@ -131,31 +136,31 @@ public class PrimitiveMemTableTest {
   }
 
   @Test
-  public void testFloatType() throws PathErrorException, StorageGroupException {
+  public void testFloatType() throws IOException, QueryProcessException, MetadataException {
     IMemTable memTable = new PrimitiveMemTable();
-    String devicePath = "d1";
+    String deviceId = "d1";
     int size = 100;
-    write(memTable, devicePath, "s1", TSDataType.FLOAT, size);
+    write(memTable, deviceId, "s1", TSDataType.FLOAT, TSEncoding.RLE, size);
   }
 
   @Test
-  public void testAllType() throws PathErrorException, StorageGroupException {
+  public void testAllType() throws IOException, QueryProcessException, MetadataException {
     IMemTable memTable = new PrimitiveMemTable();
     int count = 10;
-    String devicePath = "d1";
-    String measurementPaths[] = new String[count];
-    for (int i = 0; i < measurementPaths.length; i++) {
-      measurementPaths[i] = "s" + i;
+    String deviceId = "d1";
+    String measurementId[] = new String[count];
+    for (int i = 0; i < measurementId.length; i++) {
+      measurementId[i] = "s" + i;
     }
     int index = 0;
 
     int size = 10000;
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.BOOLEAN, size);
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.INT32, size);
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.INT64, size);
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.FLOAT, size);
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.DOUBLE, size);
-    write(memTable, devicePath, measurementPaths[index++], TSDataType.TEXT, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.BOOLEAN, TSEncoding.RLE, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.INT32, TSEncoding.RLE, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.INT64, TSEncoding.RLE, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.FLOAT, TSEncoding.RLE, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.DOUBLE, TSEncoding.RLE, size);
+    write(memTable, deviceId, measurementId[index++], TSDataType.TEXT, TSEncoding.PLAIN, size);
   }
 
   private TimeValuePair[] genTimeValuePair(int size, TSDataType dataType) {
@@ -164,27 +169,27 @@ public class PrimitiveMemTableTest {
     for (int i = 0; i < size; i++) {
       switch (dataType) {
         case BOOLEAN:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, true));
           break;
         case INT32:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, rand.nextInt()));
           break;
         case INT64:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, rand.nextLong()));
           break;
         case FLOAT:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, rand.nextFloat()));
           break;
         case DOUBLE:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, rand.nextDouble()));
           break;
         case TEXT:
-          ret[i] = new TimeValuePairInMemTable(rand.nextLong(),
+          ret[i] = new TimeValuePair(rand.nextLong(),
               TsPrimitiveType.getByType(dataType, new Binary("a" + rand.nextDouble())));
           break;
         default:

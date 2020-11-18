@@ -18,6 +18,8 @@
  */
 package org.apache.iotdb;
 
+import org.apache.iotdb.jdbc.IoTDBSQLException;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -26,65 +28,33 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 public class JDBCExample {
-
   public static void main(String[] args) throws ClassNotFoundException, SQLException {
     Class.forName("org.apache.iotdb.jdbc.IoTDBDriver");
     try (Connection connection = DriverManager.getConnection("jdbc:iotdb://127.0.0.1:6667/", "root", "root");
-         Statement statement = connection.createStatement()) {
-      for (int i = 1; i <= 100; i++) {
-        statement.execute("SET STORAGE GROUP TO root.sg" + i);
+      Statement statement = connection.createStatement()) {
+      try {
+        statement.execute("SET STORAGE GROUP TO root.sg1");
+        statement.execute("CREATE TIMESERIES root.sg1.d1.s1 WITH DATATYPE=INT64, ENCODING=RLE, COMPRESSOR=SNAPPY");
+        statement.execute("CREATE TIMESERIES root.sg1.d1.s2 WITH DATATYPE=INT64, ENCODING=RLE, COMPRESSOR=SNAPPY");
+        statement.execute("CREATE TIMESERIES root.sg1.d1.s3 WITH DATATYPE=INT64, ENCODING=RLE, COMPRESSOR=SNAPPY");
+      } catch (IoTDBSQLException e) {
+        System.out.println(e.getMessage());
       }
 
-      long startTime, endTime;
-      startTime = System.currentTimeMillis();
-      for (int i = 1; i <= 100; i++) {
-        for (int j = 1; j <= 400; j++) {
-          for (int k = 1; k <= 5; k++) {
-            statement.execute("CREATE TIMESERIES root.sg" + i + ".d" + j + ".s" + k + " WITH DATATYPE=INT64, ENCODING=RLE");
-          }
-        }
+      for (int i = 0; i <= 100; i++) {
+        statement.addBatch("insert into root.sg1.d1(timestamp, s1, s2, s3) values("+ i + "," + 1 + "," + 1 + "," + 1 + ")");
       }
-      endTime = System.currentTimeMillis();
-      System.out.println("Time Consuming of CREATE TIMESERIES: " + (endTime - startTime) + " ms");
+      statement.executeBatch();
+      statement.clearBatch();
 
-      startTime = System.currentTimeMillis();
-      String insertStatement1, insertStatement2, insertStatement3;
-      int a = 0;
-      for (int i = 1; i <= 100; i++) {
-        insertStatement3 = "insert into root.sg" + i;
-        for (int j = 1; j <= 400; j++) {
-          insertStatement2 = insertStatement3;
-          insertStatement2 += ".d" + j + "(timestamp";
-          for (int k = 1; k <= 5; k++) {
-            insertStatement2 += ", s" + k;
-          }
-          insertStatement2 += ") values(";
-          for (int k = 1; k <= 1000; k++) {
-            insertStatement1 = insertStatement2;
-            insertStatement1 += k;
-            for (int l = 1; l <= 5; l++) {
-              insertStatement1 += ", " + 1;
-            }
-            insertStatement1 += ")";
-//            System.out.println(insertStatement1);
-            a += 1;
-            if (a % 10_000 == 0) {
-              System.out.println(a);
-            }
-            statement.addBatch(insertStatement1);
-            statement.executeBatch();
-            statement.clearBatch();
-          }
-        }
-      }
-      endTime = System.currentTimeMillis();
-      System.out.println("Time Consuming of INSERT INTO: " + (endTime - startTime) + " ms");
-//      ResultSet resultSet = statement.executeQuery("select * from root where time <= 10");
-//      outputResult(resultSet);
-//      resultSet = statement.executeQuery("select count(*) from root");
-//      outputResult(resultSet);
-//      resultSet = statement.executeQuery("select count(*) from root where time >= 1 and time <= 100 group by (20ms, 0, [0, 100])");
-//      outputResult(resultSet);
+      ResultSet resultSet = statement.executeQuery("select * from root where time <= 10");
+      outputResult(resultSet);
+      resultSet = statement.executeQuery("select count(*) from root");
+      outputResult(resultSet);
+      resultSet = statement.executeQuery("select count(*) from root where time >= 1 and time <= 100 group by ([0, 100), 20ms, 20ms)");
+      outputResult(resultSet);
+    } catch (IoTDBSQLException e){
+        System.out.println(e.getMessage());
     }
   }
 
