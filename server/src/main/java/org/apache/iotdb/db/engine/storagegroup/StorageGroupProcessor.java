@@ -1099,7 +1099,7 @@ public class StorageGroupProcessor {
   public void asyncCloseOneTsFileProcessor(boolean sequence, TsFileProcessor tsFileProcessor) {
     //for sequence tsfile, we update the endTimeMap only when the file is prepared to be closed.
     //for unsequence tsfile, we have maintained the endTimeMap when an insertion comes.
-    if (closingSequenceTsFileProcessor.contains(tsFileProcessor) ||
+    if (closingSequenceTsFileProcessor.contains(tsFileProcessor) || 
         closingUnSequenceTsFileProcessor.contains(tsFileProcessor)) {
       return;
     }
