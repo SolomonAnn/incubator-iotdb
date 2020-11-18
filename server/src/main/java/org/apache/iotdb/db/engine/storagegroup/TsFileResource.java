@@ -838,13 +838,11 @@ public class TsFileResource {
    * @return initial resource map size
    */
   public long calculateRamSize() {
-    return RamUsageEstimator.sizeOf(deviceToIndex) + RamUsageEstimator.sizeOf(startTimes) +
-        RamUsageEstimator.sizeOf(endTimes);
+    return RamUsageEstimator.sizeOf(deviceToIndex) + RamUsageEstimator.sizeOf(startTimes) + RamUsageEstimator.sizeOf(endTimes);
   }
 
   /**
    * Calculate the resource ram increment when insert data in TsFileProcessor
-   *
    * @return ramIncrement
    */
   public long estimateRamIncrement(String deviceToBeChecked) {

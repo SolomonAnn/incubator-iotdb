@@ -68,12 +68,10 @@ public class ForceAppendTsFileWriter extends TsFileIOWriter {
       versionInfo = tsFileMetadata.getVersionInfo();
       totalChunkNum = tsFileMetadata.getTotalChunkNum();
       invalidChunkNum = tsFileMetadata.getInvalidChunkNum();
-
       List<String> devices = reader.getAllDevices();
       for (String device : devices) {
         List<ChunkMetadata> chunkMetadataList = new ArrayList<>();
-        reader.readChunkMetadataInDevice(device).values()
-            .forEach(chunkMetadataList::addAll);
+        reader.readChunkMetadataInDevice(device).values().forEach(chunkMetadataList::addAll);
         ChunkGroupMetadata chunkGroupMetadata = new ChunkGroupMetadata(device, chunkMetadataList);
         chunkGroupMetadataList.add(chunkGroupMetadata);
       }

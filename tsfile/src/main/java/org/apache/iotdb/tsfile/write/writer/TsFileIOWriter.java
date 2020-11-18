@@ -87,7 +87,6 @@ public class TsFileIOWriter {
   private String currentChunkGroupDeviceId;
   private long currentChunkGroupStartOffset;
   protected List<Pair<Long, Long>> versionInfo = new ArrayList<>();
-
   // for upgrade tool
   Map<String, List<TimeseriesMetadata>> deviceTimeseriesMetadataMap;
 

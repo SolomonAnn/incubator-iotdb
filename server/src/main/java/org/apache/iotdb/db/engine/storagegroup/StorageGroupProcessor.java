@@ -499,7 +499,6 @@ public class StorageGroupProcessor {
         Collections.addAll(upgradeFiles,
             fsFactory.listFilesBySuffix(upgradeFolder.getAbsolutePath(), TSFILE_SUFFIX));
       }
-      // if already move old files to upgradeFolder
       else if (upgradeFolder.exists()) {
         Collections.addAll(upgradeFiles,
             fsFactory.listFilesBySuffix(upgradeFolder.getAbsolutePath(), TSFILE_SUFFIX));
@@ -923,8 +922,7 @@ public class StorageGroupProcessor {
   public void asyncFlushMemTableInTsFileProcessor(TsFileProcessor tsFileProcessor) {
     writeLock();
     try {
-      if (!closingSequenceTsFileProcessor.contains(tsFileProcessor) &&
-          !closingUnSequenceTsFileProcessor.contains(tsFileProcessor)) {
+      if (!closingSequenceTsFileProcessor.contains(tsFileProcessor) && !closingUnSequenceTsFileProcessor.contains(tsFileProcessor)) {
         fileFlushPolicy.apply(this, tsFileProcessor, tsFileProcessor.isSequence());
       }
     } finally {
@@ -1099,8 +1097,7 @@ public class StorageGroupProcessor {
   public void asyncCloseOneTsFileProcessor(boolean sequence, TsFileProcessor tsFileProcessor) {
     //for sequence tsfile, we update the endTimeMap only when the file is prepared to be closed.
     //for unsequence tsfile, we have maintained the endTimeMap when an insertion comes.
-    if (closingSequenceTsFileProcessor.contains(tsFileProcessor) || 
-        closingUnSequenceTsFileProcessor.contains(tsFileProcessor)) {
+    if (closingSequenceTsFileProcessor.contains(tsFileProcessor) || closingUnSequenceTsFileProcessor.contains(tsFileProcessor)) {
       return;
     }
     logger.info("Async close tsfile: {}",
